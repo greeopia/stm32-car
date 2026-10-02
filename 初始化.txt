@@ -1,0 +1,11 @@
+START ──→ 从机地址+写 ──→ 寄存器号(0x3B) ──→ 重复START ──→ 从机地址+读 ──→ 14字节数据 ──→ NACK ──→ STOP
+└──────────────── 地址阶段，CPU 必须一步一步走 ────────────────┘  └──── DMA 接管 ────┘
+
+蓝牙串口: 
+USART1_TX/RX: (PB6PB7) (TX: DMA1CH4)
+RX:IDLE+dma(DMA1CH5) TX:dmaTC+dma
+VCC(5V: L298N的5V输出) GND
+PA7: 蓝牙state引脚
+
+RX:可以接收普通转向数据，也可以接收json配置参数（要上双缓冲吗？）
+TX:发送当前一些参数到vofa

@@ -1,0 +1,24 @@
+*** Using Compiler 'V5.06 update 7 (build 960)', folder: 'D:\keil_v5\ARM\ARMCC\Bin'
+Build target 'Target_1'
+compiling Tasks.c...
+User\IR.h(3): warning:  #1295-D: Deprecated declaration IR_init - give arg types
+  void IR_init();
+User\motor.h(3): warning:  #1295-D: Deprecated declaration motor_init - give arg types
+  void motor_init();
+User\motor.h(4): warning:  #1295-D: Deprecated declaration GetDutyl - give arg types
+  float GetDutyl();
+User\motor.h(5): warning:  #1295-D: Deprecated declaration GetDutyr - give arg types
+  float GetDutyr();
+User\motor.h(7): warning:  #1295-D: Deprecated declaration Encoder_init - give arg types
+  void Encoder_init();
+User\motor.h(8): warning:  #1295-D: Deprecated declaration GetSpeedl - give arg types
+  float GetSpeedl();
+User\motor.h(9): warning:  #1295-D: Deprecated declaration GetSpeedr - give arg types
+  float GetSpeedr();
+User\Tasks.c: 7 warnings, 0 errors
+compiling IMU.c...
+linking...
+Program Size: Code=1340 RO-data=268 RW-data=16 ZI-data=1024  
+FromELF: creating hex file...
+".\Objects\project.axf" - 0 Error(s), 7 Warning(s).
+Build Time Elapsed:  00:00:00

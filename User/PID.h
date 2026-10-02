@@ -1,0 +1,74 @@
+#pragma once
+
+#ifndef  __CONTROL_PID_H
+#define  __CONTROL_PID_H
+
+// __CONTROL_PID_H
+//普通PID结构体
+typedef struct
+{
+    float kp,ki,kd;                         //三个系数
+    float error,lastError,lastlastError;    //误差、上次误差、上上次误差
+    float integral,maxIntegral;             //积分、积分限幅
+    float output,maxOutput,minOutput;       //输出、输出限幅
+} PID;
+
+//PD+前馈控制结构体
+typedef struct 
+{
+    float Kp;       //比例系数
+    float Kd;       //微分系数
+    float Kff;      //前馈系数
+    float Kff_acc;  //前馈变化率系数
+
+    float output;       //输出
+
+    float maxOutput;    //输出上限
+
+    float dt;           //采样周期
+
+    //状态变量
+    float error;              //本次误差
+    float last_error;         //上一次的误差
+    float last_target;        //上一次的目标角速度
+    float last_derivative;    //上一次的微分项（用于低通滤波)
+    float last_target_acc;    //上一次的目标角速度变化律（用于低通滤波）
+
+} PD_FF;
+
+
+//保证编译pid.h的时，优先编译PID结构体定义，避免编译器未识别到PID结构体后去编译其他用了PID结构体的地方，导致报错
+#include "stm32f10x.h"
+
+//普通PID控制
+void Incremental_PID_Init(PID *pid, float p, float i, float d, float minOutput, float maxOutput);
+void Incremental_PID_Cal(PID *pid, float set_value, float get_value);
+
+void Positional_PID_Init(PID *pid, float p, float i, float d, float maxI,float minOutput, float maxOutput);
+void Positional_PID_Cal(PID *pid,float set_value, float get_value);
+
+void PID_Reset(PID *pid);   //清除PID环的任何时刻误差、积分、输出
+
+void PID_Lmotor(int target);
+void PID_Rmotor(int target);
+void PID_CarStart(float target, float now_value, int step, PID *left_speed, PID *right_speed);
+
+//PD+前馈 控制
+void PD_FF_Init(PD_FF* pd, float kp, float kd, float kff, float kff_acc, float max, float ms);
+void PD_FF_Reset(PD_FF* pd);
+void PD_FF_Cal(PD_FF* pd, float target, float actual);
+
+
+//声明结构体
+extern PID servo_pid;
+extern PID Lmotor_PID; //左电机PID
+extern PID Rmotor_PID; //右电机PID
+extern PID Photo_PID;  //图像环
+extern PID Angle_PID;  //角速度环(转向环)
+// extern PD_FF Angle_PID_F;  //角速度环
+// extern PID Temp_PID;   //临时角度环（偏航角,避障、进圆环用） 
+
+extern PID servo_pid, makeup_pid;
+
+#endif
+
