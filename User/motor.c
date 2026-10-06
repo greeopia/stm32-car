@@ -3,6 +3,7 @@
 #include "PID.h"
 #include "motor.h"
 #include "IMU.h"
+#include "SysTick.h"
 
 
 void motor_init() {
@@ -55,6 +56,9 @@ void motor_init() {
 	// 这样才是正转嘛(笑)
 } 
 
+extern PID Lmotor_PID;
+extern PID Rmotor_PID;
+
 float GetDutyl() {
 	return 1.0f*TIM1->CCR1/(TIM1->ARR+1);
 }
@@ -97,18 +101,32 @@ static const float WHEEL_RADIUS = 0.033f; // m
 #ifndef PI
 #define PI          3.14159265f
 #endif
-// 等待实测
 float GetMotorCountl() { // m/20ms
 	uint16_t cnt = TIM2->CNT;
-	TIM2->CNT = 0;
+	// TIM2->CNT = 0;
 
-	float speedl = (1.0f*cnt/20)*2*PI*WHEEL_RADIUS;
-	return speedl;
+	float Countl = (1.0f*cnt/20)*2*PI*WHEEL_RADIUS;
+	return Countl;
 }
 
 float GetMotorCountr() {
 	uint16_t cnt = TIM3->CNT;
-	TIM3->CNT = 0;
-	float speedr = (1.0f*cnt/20)*2*PI*WHEEL_RADIUS;
-	return speedr;
+	// TIM3->CNT = 0;
+
+	float Countr = (1.0f*cnt/20)*2*PI*WHEEL_RADIUS;
+	return Countr;
+}
+
+float speedl = 0.0f, speedr = 0.0f; // m/s
+
+void motor_Task() {
+	static float LastCountl = 0, LastCountr = 0;
+	static uint32_t LastTick = 0;
+	float Countl = GetMotorCountl(), Countr = GetMotorCountr();
+	uint32_t NowTick = GetTick();
+	speedl = (Countl - LastCountl) / (NowTick - LastTick) * 1000.0f;
+	speedr = (Countr - LastCountr) / (NowTick - LastTick) * 1000.0f;
+	LastTick = NowTick; LastCountl = Countl; LastCountr = Countr;
+	
+	
 }

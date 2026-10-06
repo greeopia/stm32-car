@@ -60,11 +60,12 @@ void PD_FF_Cal(PD_FF* pd, float target, float actual);
 
 
 //声明结构体
-extern PID servo_pid;
+// extern PID servo_pid;
 extern PID Lmotor_PID; //左电机PID
 extern PID Rmotor_PID; //右电机PID
-extern PID Photo_PID;  //图像环
+// extern PID Photo_PID;  //图像环
 extern PID Angle_PID;  //角速度环(转向环)
+extern PID IR_PID;     //巡线环
 // extern PD_FF Angle_PID_F;  //角速度环
 // extern PID Temp_PID;   //临时角度环（偏航角,避障、进圆环用） 
 

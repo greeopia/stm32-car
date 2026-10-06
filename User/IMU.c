@@ -440,8 +440,8 @@ void DMA1_Channel7_IRQHandler(void)
 
 void IMU_Task(void)
 {
-    uint32_t irq_state = __get_PRIMASK();
-    __disable_irq();
+    // uint32_t irq_state = __get_PRIMASK();
+    // __disable_irq();
     if (imu_status == IMU_STATUS_BUSY)
     {
         if (imu_stage == IMU_STAGE_STOP &&
@@ -460,7 +460,7 @@ void IMU_Task(void)
             MPU6050_Abort(IMU_ERROR_TIMEOUT);
         }
     }
-    __set_PRIMASK(irq_state);
+    // __set_PRIMASK(irq_state);
 }
 
 static float Kalman_getAngle(Kalman_t *kalman, float angle, float rate, float dt)

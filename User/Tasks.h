@@ -20,4 +20,6 @@ typedef struct {
 
 extern Task_t task[3];
 
-void Task_Init(Task_t* task[], uint8_t tasksnum);
+// void Task_Init(Task_t* task[], uint8_t tasksnum);
+void Tasks_Tick(void);
+void Tasks_Run(void);

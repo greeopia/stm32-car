@@ -3,22 +3,22 @@
 #include "OLED.h"
 
 /*引脚配置*/
-#define OLED_SCL_Pin GPIO_Pin_10
+#define OLED_SCL_Pin GPIO_Pin_12
 #define OLED_SDA_Pin GPIO_Pin_11
 
-#define OLED_W_SCL(x)		GPIO_WriteBit(GPIOB, OLED_SCL_Pin, (BitAction)(x))
-#define OLED_W_SDA(x)		GPIO_WriteBit(GPIOB, OLED_SDA_Pin, (BitAction)(x))
+#define OLED_W_SCL(x)		GPIO_WriteBit(GPIOA, OLED_SCL_Pin, (BitAction)(x))
+#define OLED_W_SDA(x)		GPIO_WriteBit(GPIOA, OLED_SDA_Pin, (BitAction)(x))
 
 /*引脚初始化*/
 void OLED_I2C_Init(void)
 {
-    RCC_APB2PeriphClockCmd(RCC_APB2Periph_GPIOB, ENABLE);
+    RCC_APB2PeriphClockCmd(RCC_APB2Periph_GPIOA, ENABLE);
 	
 	GPIO_InitTypeDef GPIO_InitStructure;
  	GPIO_InitStructure.GPIO_Mode = GPIO_Mode_Out_OD;
 	GPIO_InitStructure.GPIO_Speed = GPIO_Speed_50MHz;
 	GPIO_InitStructure.GPIO_Pin = OLED_SCL_Pin | OLED_SDA_Pin;
-	GPIO_Init(GPIOB, &GPIO_InitStructure);
+	GPIO_Init(GPIOA, &GPIO_InitStructure);
 	
 	OLED_W_SCL(1);
 	OLED_W_SDA(1);

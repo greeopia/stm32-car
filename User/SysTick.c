@@ -21,4 +21,5 @@ void SysTickInit() {
 void SysTick_Handler(void)
 {
     uwTick++;
+    Tasks_Tick();
 }
