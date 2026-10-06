@@ -5,5 +5,5 @@ float GetDutyl();
 float GetDutyr();
 
 void Encoder_init();
-float GetSpeedl();
-float GetSpeedr();
+float GetMotorCountl();
+float GetMotorCountr();

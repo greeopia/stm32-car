@@ -130,7 +130,7 @@ ErrorStatus IMU_StartRead(uint32_t now_ms);
  * 注意：DMA中断只发出STOP；此函数确认STOP和总线BUSY清除后才置READY。
  *       不调用会影响完成状态和超时处理；不要在这里使用阻塞延时调度。
  */
-void IMU_Task(uint32_t now_ms);
+void IMU_Task(void);
 
 /*
  * 功能：取出READY状态的一帧，完成单位换算和X/Y倾角滤波。

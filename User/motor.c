@@ -10,7 +10,7 @@ void motor_init() {
 	RCC_APB2PeriphClockCmd(RCC_APB2Periph_GPIOA | RCC_APB2Periph_TIM1, ENABLE);
 	
 	GPIO_InitTypeDef GPIO_InitStruct;
-	GPIO_InitStruct.GPIO_Mode = GPIO_Mode_Out_PP;
+	GPIO_InitStruct.GPIO_Mode = GPIO_Mode_AF_PP;
 	GPIO_InitStruct.GPIO_Pin = GPIO_Pin_8 | GPIO_Pin_9;
 	GPIO_InitStruct.GPIO_Speed = GPIO_Speed_50MHz;
 	GPIO_Init(GPIOA, & GPIO_InitStruct);
@@ -20,8 +20,8 @@ void motor_init() {
 	TIM_TimeBaseInitTypeDef TIM_TimeBaseStruct;
 	TIM_TimeBaseStruct.TIM_ClockDivision = TIM_CKD_DIV1;
 	TIM_TimeBaseStruct.TIM_CounterMode = TIM_CounterMode_Up;
-	TIM_TimeBaseStruct.TIM_Period = 3600 - 1;
-	TIM_TimeBaseStruct.TIM_Prescaler = 1-1;
+	TIM_TimeBaseStruct.TIM_Period = 7200 - 1;
+	TIM_TimeBaseStruct.TIM_Prescaler = 10-1; // 72MHz/10/7200 = 1000Hz
 	TIM_TimeBaseStruct.TIM_RepetitionCounter = 0;
 	TIM_TimeBaseInit(TIM1, &TIM_TimeBaseStruct);
 	
@@ -31,13 +31,13 @@ void motor_init() {
 	TIM_OCInitStruct.TIM_OCMode = TIM_OCMode_PWM1;
 	TIM_OCInitStruct.TIM_OCPolarity = TIM_OCPolarity_High;
 	TIM_OCInitStruct.TIM_OutputState = TIM_OutputState_Enable;
-	TIM_OCInitStruct.TIM_Pulse = 0;
+	TIM_OCInitStruct.TIM_Pulse = (uint16_t)(7200 * 0.38f);
 	TIM_OC1Init(TIM1, &TIM_OCInitStruct);
 	TIM_OC2Init(TIM1, &TIM_OCInitStruct);
 	
 	TIM_CtrlPWMOutputs(TIM1, ENABLE);
 	TIM_Cmd(TIM1, ENABLE);
-	// CCR1/2: 0~3600
+	// CCR1/2: 0~7200
 	
 	
 	// 方向引脚
@@ -48,10 +48,11 @@ void motor_init() {
 	GPIO_InitStruct.GPIO_Speed = GPIO_Speed_50MHz;
 	GPIO_Init(GPIOB, & GPIO_InitStruct);
 
-	GPIO_WriteBit(GPIOB, GPIO_Pin_12, Bit_SET); // OUT1
-	GPIO_WriteBit(GPIOB, GPIO_Pin_13, Bit_RESET); // OUT2
-	GPIO_WriteBit(GPIOB, GPIO_Pin_14, Bit_SET); // OUT3
-	GPIO_WriteBit(GPIOB, GPIO_Pin_15, Bit_RESET); // OUT4
+	GPIO_WriteBit(GPIOB, GPIO_Pin_12, Bit_RESET); // OUT1
+	GPIO_WriteBit(GPIOB, GPIO_Pin_13, Bit_SET); // OUT2
+	GPIO_WriteBit(GPIOB, GPIO_Pin_14, Bit_RESET); // OUT3
+	GPIO_WriteBit(GPIOB, GPIO_Pin_15, Bit_SET); // OUT4
+	// 这样才是正转嘛(笑)
 } 
 
 float GetDutyl() {
@@ -91,13 +92,13 @@ void Encoder_init() {
 	TIM_Cmd(TIM3, ENABLE);
 }
 
-const float WHEEL_RADIUS = 0.03; // m
+static const float WHEEL_RADIUS = 0.033f; // m
 
 #ifndef PI
 #define PI          3.14159265f
 #endif
 // 等待实测
-float GetSpeedl() { // m/20ms
+float GetMotorCountl() { // m/20ms
 	uint16_t cnt = TIM2->CNT;
 	TIM2->CNT = 0;
 
@@ -105,7 +106,7 @@ float GetSpeedl() { // m/20ms
 	return speedl;
 }
 
-float GetSpeedr() {
+float GetMotorCountr() {
 	uint16_t cnt = TIM3->CNT;
 	TIM3->CNT = 0;
 	float speedr = (1.0f*cnt/20)*2*PI*WHEEL_RADIUS;

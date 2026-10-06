@@ -10,8 +10,7 @@ VCC(5V: L298N的5V输出) GND
 PA7: 蓝牙state引脚
 
 两个光槽计次:
-VCC(3.3~5V) GND 两个tim计次 (PA0PA6) //未知领域
-/*
+VCC(3.3~5V) GND 两个tim计次 (PA0PA6) //未知领域                                                                                                        
 PSC=0,ARR=65536-1
 
 /*外部时钟配置，两路都走TI1，即外部时钟模式1*/

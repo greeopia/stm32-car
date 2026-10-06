@@ -420,6 +420,7 @@ void DMA1_Channel7_IRQHandler(void)
     if (DMA_GetITStatus(DMA1_IT_TE7) == SET)
     {
         DMA_ClearFlag(DMA1_FLAG_GL7);
+        // DMA_ClearITPendingBit(DMA1_IT_TE7); 可行吗
         MPU6050_Abort(IMU_ERROR_DMA);
         return;
     }
@@ -437,7 +438,7 @@ void DMA1_Channel7_IRQHandler(void)
     }
 }
 
-void IMU_Task(uint32_t now_ms)
+void IMU_Task(void)
 {
     uint32_t irq_state = __get_PRIMASK();
     __disable_irq();
@@ -454,7 +455,7 @@ void IMU_Task(uint32_t now_ms)
             imu_stage = IMU_STAGE_IDLE;
             imu_status = IMU_STATUS_READY;
         }
-        else if ((uint32_t)(now_ms - frame_start_ms) >= IMU_TIMEOUT_MS)
+        else if ((uint32_t)(GetTick() - frame_start_ms) >= IMU_TIMEOUT_MS)
         {
             MPU6050_Abort(IMU_ERROR_TIMEOUT);
         }

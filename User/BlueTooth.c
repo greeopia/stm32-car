@@ -2,6 +2,7 @@
 #include "BlueTooth.h"
 #include "cJSON.h"
 #include "cJSON_Utils.h"
+#include "vofa.h"
 
 void BlueTooth_init() {
 	RCC_APB2PeriphClockCmd(RCC_APB2Periph_GPIOB | RCC_APB2Periph_AFIO | RCC_APB2Periph_USART1, ENABLE);
@@ -27,6 +28,40 @@ void BlueTooth_init() {
 	USART_InitStruct.USART_StopBits = USART_StopBits_1;
 	USART_InitStruct.USART_WordLength = USART_WordLength_8b;
 	USART_Init(USART1, &USART_InitStruct);	
+
+	DMA_InitTypeDef DMA_InitStruct; 
+
+	DMA_DeInit(DMA1_Channel4); // TX: justfloat
+	DMA_InitStruct.DMA_PeripheralBaseAddr = (uint32_t)&USART1->DR;
+	DMA_InitStruct.DMA_MemoryBaseAddr = (uint32_t)&TxFrame;
+	DMA_InitStruct.DMA_DIR = DMA_DIR_PeripheralDST;
+	DMA_InitStruct.DMA_BufferSize = sizeof(TxFrame);
+	DMA_InitStruct.DMA_PeripheralInc = DMA_PeripheralInc_Disable;
+	DMA_InitStruct.DMA_MemoryInc = DMA_MemoryInc_Enable;
+	DMA_InitStruct.DMA_PeripheralDataSize = DMA_PeripheralDataSize_Byte; // USART_WordLength_8b
+	DMA_InitStruct.DMA_MemoryDataSize = DMA_MemoryDataSize_Byte;
+	DMA_InitStruct.DMA_Mode = DMA_Mode_Circular;
+	DMA_InitStruct.DMA_Priority = DMA_Priority_Medium;
+	DMA_InitStruct.DMA_M2M = DMA_M2M_Disable;
+	DMA_Init(DMA1_Channel4, &DMA_InitStruct);
+	USART_DMACmd(USART1, USART_DMAReq_Tx, ENABLE);
+	DMA_ITConfig(DMA1_Channel4, DMA_IT_TC, ENABLE);
+
+	DMA_DeInit(DMA1_Channel5); // RX: IDLE->cJSON/指令 (这里没有连续转运嗷)
+	DMA_InitStruct.DMA_PeripheralBaseAddr = (uint32_t)&USART1->DR;
+	DMA_InitStruct.DMA_MemoryBaseAddr = (uint32_t)&TxFrame;
+	DMA_InitStruct.DMA_DIR = DMA_DIR_PeripheralDST;
+	DMA_InitStruct.DMA_BufferSize = sizeof(TxFrame);
+	DMA_InitStruct.DMA_PeripheralInc = DMA_PeripheralInc_Enable;
+	DMA_InitStruct.DMA_MemoryInc = DMA_MemoryInc_Disable;
+	DMA_InitStruct.DMA_PeripheralDataSize = DMA_PeripheralDataSize_Byte; // USART_WordLength_8b
+	DMA_InitStruct.DMA_MemoryDataSize = DMA_MemoryDataSize_Byte;
+	DMA_InitStruct.DMA_Mode = DMA_Mode_Normal;
+	DMA_InitStruct.DMA_Priority = DMA_Priority_Medium;
+	DMA_InitStruct.DMA_M2M = DMA_M2M_Disable;
+	DMA_Init(DMA1_Channel5, &DMA_InitStruct);
+	USART_DMACmd(USART1, USART_DMAReq_Rx, ENABLE);
+	USART_ITConfig(USART1, USART_IT_IDLE, ENABLE);
 	
 	// 普通中断接收 (IDLE+dma+环形缓冲区 接收？可以的接受指令)
 //	USART_ITConfig(USART1, USART_IT_RXNE, ENABLE);
@@ -44,7 +79,7 @@ void BlueTooth_init() {
 }
 
 void USART1_IRQHandler() {
-	if (USART_GetITStatus(USART1, USART_IT_RXNE) == SET) { // 接收
+	if (USART_GetITStatus(USART1, USART_IT_IDLE) == SET) { // 接收
 		
 	}
 	

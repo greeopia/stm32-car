@@ -13,3 +13,7 @@
 # eide template
 *.ept
 *.eide-template
+
+/Backups
+/Objects
+/Listings
