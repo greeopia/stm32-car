@@ -23,7 +23,6 @@
  * 
  * ************************************************************************
  */
-//增量式PID参数的初始化
 void Incremental_PID_Init(PID *pid, float p, float i, float d, float minOutput, float maxOutput)
 {
 	pid->kp = p;
@@ -43,10 +42,9 @@ void Incremental_PID_Init(PID *pid, float p, float i, float d, float minOutput, 
  * 
  * ************************************************************************
  */
-//增量式PID控制器
 void Incremental_PID_Cal(PID *pid, float set_value,float get_value)
 {
-	pid->error = set_value - get_value;      									        //计算偏差
+	pid->error = set_value - get_value;  // 目标值 - 实际值    									        //计算偏差
 	pid->output += pid->kp*(pid->error - pid->lastError) + pid->ki*pid->error + 
 				pid->kd*(pid->error - 2*pid->lastError + pid->lastlastError);			//增量式PI控制器
 	pid->lastlastError = pid->lastError;    											//保存上上次误差
@@ -73,7 +71,6 @@ void Incremental_PID_Cal(PID *pid, float set_value,float get_value)
  * 
  * ************************************************************************
  */
-//位置式PID参数的初始化
 void Positional_PID_Init (PID *pid, float p, float i, float d, float maxI,float minOutput, float maxOutput)
 {
     pid->kp = p;
@@ -91,12 +88,10 @@ void Positional_PID_Init (PID *pid, float p, float i, float d, float maxI,float 
  * @param[in] pid  pid结构体
  * @param[in] set_value  目标值
  * @param[in] get_value  反馈值
- * 
+ * @note 可能imu用
  * ************************************************************************
  */
-//位置式PID控制器
-void Positional_PID_Cal(PID *pid,float set_value, float get_value) // 可能imu用
-{
+void Positional_PID_Cal(PID *pid,float set_value, float get_value) {
 	float dout,pout;
     //更新数据
     pid->lastError = pid->error; 							//将旧error存起来

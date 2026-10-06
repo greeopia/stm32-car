@@ -117,12 +117,18 @@ float GetMotorCountr() {
 	return Countr;
 }
 
-float speedl = 0.0f, speedr = 0.0f; // m/s
+float speedl = 0.0f, speedr = 0.0f; // m/s 实际值
 
 void motor_Task() {
 	static float LastCountl = 0, LastCountr = 0;
 	static uint32_t LastTick = 0;
 	float Countl = GetMotorCountl(), Countr = GetMotorCountr();
+	if (LastCountl > Countl || LastCountr > Countr) { // 计数器溢出
+		LastCountl = Countl;
+		LastCountr = Countr;
+		LastTick = GetTick();
+		return;
+	}
 	uint32_t NowTick = GetTick();
 	speedl = (Countl - LastCountl) / (NowTick - LastTick) * 1000.0f;
 	speedr = (Countr - LastCountr) / (NowTick - LastTick) * 1000.0f;
@@ -130,3 +136,10 @@ void motor_Task() {
 	
 	
 }
+//    // 计算转向误差（头文件已定义ImageStatus）
+//     float turn_error = ImageStatus.Det_True - (float)ImageStatus.MiddleLine;
+//     // 误差死区：±2内视为无偏差
+//     if (turn_error > -1.0f && turn_error < 1.0f)
+//     {
+//         turn_error = 0;
+//     }

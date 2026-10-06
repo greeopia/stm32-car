@@ -51,7 +51,7 @@ void PID_Reset(PID *pid);   //清除PID环的任何时刻误差、积分、输�
 
 void PID_Lmotor(int target);
 void PID_Rmotor(int target);
-void PID_CarStart(float target, float now_value, int step, PID *left_speed, PID *right_speed);
+// void PID_CarStart(float target, float now_value, int step, PID *left_speed, PID *right_speed);
 
 //PD+前馈 控制
 void PD_FF_Init(PD_FF* pd, float kp, float kd, float kff, float kff_acc, float max, float ms);

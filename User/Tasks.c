@@ -8,15 +8,16 @@
 #include "IMU.h"
 
 Task_t task[3] = {
-    {.flag = 0, .TimCount = 0, .TimReload = 10, .pTaskFunc = motor_Task},
-    {.flag = 0, .TimCount = 0, .TimReload = 20, .pTaskFunc = IMU_Task},
-    {.flag = 0, .TimCount = 0, .TimReload = 40, .pTaskFunc = IR_Task},
+    {.flag = 0, /*.TimCount = 0,*/ .TimReload = 10, .pTaskFunc = motor_Task},
+    {.flag = 0, /*.TimCount = 0,*/ .TimReload = 20, .pTaskFunc = IMU_Task},
+    {.flag = 0, /*.TimCount = 0,*/ .TimReload = 40, .pTaskFunc = IR_Task},
 }; // 顺序应该也代表简易仲裁优先级了
 
 /* 每1ms调用一次，只负责计时 */
+static uint8_t TaskNum = sizeof(task)/sizeof(task[0]);
 void Tasks_Tick(void)
 {
-    for (uint8_t i = 0; i < sizeof(task)/sizeof(task[0]); i++)
+    for (uint8_t i = 0; i < TaskNum; i++)
     {
         if (task[i].pTaskFunc == NULL) continue; // 空槽位不参与计时：TimReload=0会导致flag被立即置位
             

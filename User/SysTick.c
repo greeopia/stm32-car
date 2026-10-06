@@ -20,6 +20,6 @@ void SysTickInit() {
   */
 void SysTick_Handler(void)
 {
-    uwTick++;
+    ++uwTick;
     Tasks_Tick();
 }
