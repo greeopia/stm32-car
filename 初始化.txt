@@ -19,10 +19,64 @@ TX:发送当前一些参数到vofa
 dma: 外设寄存器 <-> Flash(dma寄存器)
 flash->外设: 外设地址不自增，数据地址自增
 
+
 虽然数据是 float，DMA 仍然每次搬一个字节，原样搬完一个浮点数的四个字节(一字=4字节)
+
+在清除标志位时，代码中常将多个掩码按位或传入函数：
+DMA_ClearFlag(DMA1_FLAG_GL7 | DMA1_FLAG_TC7 | DMA1_FLAG_HT7 | DMA1_FLAG_TE7);
+这只是利用 C 语言特性一次性传递多个掩码。因硬件特性向 GL7 写 1 会自动清除其他几项，有时仅需调用 DMA_ClearFlag(DMA1_FLAG_GL7); 即可。
+
+https://zhuanlan.zhihu.com/p/572317455 (这篇文章不赖)
 
 L298N要求pwm输入引脚驱动频率为1k到5k赫兹 
 
-在PSC=10-1,ARR=7200-1 (1kHz)下，当CCR=0.38f*ARR时才能空转
+在PSC=10-1,ARR=7200-1 (1kHz)下，当CCR=0.38f*ARR时才能空转(2s锂电池)
+
+'''c
+
+void USART2_IRQHandler() {
+    if (USART_GetITStatus(USART2, USART_IT_TC) == SET)
+    {
+        /* 清除发送完成标志，避免反复进入中断 */
+        USART_ClearITPendingBit(USART2, USART_IT_TC);
+    }    
+}
+
+void DMA1_Channel7_IRQHandler() {
+    if (DMA_GetITStatus(DMA1_IT_TC7) != SET) {
+        return;
+    }
+    DMA_Cmd(DMA1_Channel7, DISABLE);
+    DMA_ClearFlag(DMA1_FLAG_GL7);
+
+    tx_busy = 0;    
+}
+
+static uint8_t DMA_Send(const void *data, uint16_t len) {
+    if (data == NULL || len == 0 || len > U2_TX_SIZE) return 0;     
+
+    if (tx_busy) return 0; 
+
+    /* 先置忙，再准备和启动发送 */
+    tx_busy = 1;
+
+    memcpy(tx_buf, data, len);
+
+    DMA_Cmd(DMA1_Channel7, DISABLE);
+    DMA_ClearFlag(DMA1_FLAG_GL7);
+    DMA_SetCurrDataCounter(DMA1_Channel7, len);
+
+    /* 便于之后查询USART TC，确认线路已发完 */
+    USART_ClearFlag(USART2, USART_FLAG_TC);
+
+    /* 确保缓冲区写入完成，再交给DMA */
+    __DMB();
+    DMA_Cmd(DMA1_Channel7, ENABLE);
+
+    return 1;
+}
+// 记模板了孩子们 
+
+'''
 
 

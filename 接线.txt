@@ -1,20 +1,24 @@
 
 motor:
 TIM1CH1/2: (PA8PA9) PWM
-方向引脚: (GPIO输出) (PB12～PB15)
+方向引脚: 固定正转，PB12=0、PB13=1、PB14=0、PB15=1
+仅用PWM调速，占空比0~1；负占空比按0处理。
+电位器: PA1接滑动端，ADC1通道1；ADC 0~4095对应目标速度0~3m/s。
+电位器低端为停止位置，目标为0时清除电机PI状态并关闭PWM输出。
+单路码盘提供正转速度反馈；PI允许负误差，用于超速时减小PWM。
 
-蓝牙串口: 
+蓝牙串口:
 USART1_TX/RX: (PB6PB7) (TX: DMA1CH4)
 RX:IDLE+dma(DMA1CH5) TX:dmaTC+dma
 VCC(5V: L298N的5V输出) GND
 PA7: 蓝牙state引脚
 
 两个光槽计次:
-VCC(3.3~5V) GND 两个tim计次 (PA0PA6) //未知领域                                                                                                        
+VCC(3.3~5V) GND 两个tim计次 (PA0PA6) //未知领域
 PSC=0,ARR=65536-1
 
 /*外部时钟配置，两路都走TI1，即外部时钟模式1*/
-TIM_TIxExternalClockConfig(TIM2, TIM_TIxExternalCLK1Source_TI1, TIM_ICPolarity_Rising, 0xF);												
+TIM_TIxExternalClockConfig(TIM2, TIM_TIxExternalCLK1Source_TI1, TIM_ICPolarity_Rising, 0xF);
 TIM_TIxExternalClockConfig(TIM3, TIM_TIxExternalCLK1Source_TI1, TIM_ICPolarity_Rising, 0xF);
 */
 
@@ -22,9 +26,9 @@ TIM_TIxExternalClockConfig(TIM3, TIM_TIxExternalCLK1Source_TI1, TIM_ICPolarity_R
 VCC(3.3~5V) GND 5个GPIO输入 (PA4、PA5、PB0、PB1、PB5)
 
 mpu6050:
-VCC(3.3V) GND 
+VCC(3.3V) GND
 SCL SDA (PB8PB9: I2C1_SCL/SDA) (I2C1_RX: DMA1CH7)
 
 0.96寸软IIC OLED (PA11 PA12)
 
-速度环10ms 角速度环20ms 外环(巡线)40ms
+速度环100ms /*角速度环20ms*/ 外环(巡线)200ms 上报50ms

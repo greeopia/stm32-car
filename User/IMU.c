@@ -23,6 +23,7 @@
 #include <math.h>
 #include <string.h>
 #include "stm32f10x.h"                  // Device header
+#include "Tasks.h"
 
 #define IMU_I2C_ERROR_BITS (I2C_SR1_AF | I2C_SR1_BERR | I2C_SR1_ARLO | I2C_SR1_OVR)
 
@@ -408,35 +409,35 @@ void I2C1_EV_IRQHandler(void)
     }
 }
 
-void I2C1_ER_IRQHandler(void)
-{
-    IMU_Error_t error = MPU6050_CheckError();
-    if (error != IMU_ERROR_NONE)
-        MPU6050_Abort(error);
-}
+// void I2C1_ER_IRQHandler(void)
+// {
+//     IMU_Error_t error = MPU6050_CheckError();
+//     if (error != IMU_ERROR_NONE)
+//         MPU6050_Abort(error);
+// }
 
-void DMA1_Channel7_IRQHandler(void)
-{
-    if (DMA_GetITStatus(DMA1_IT_TE7) == SET)
-    {
-        DMA_ClearFlag(DMA1_FLAG_GL7);
-        // DMA_ClearITPendingBit(DMA1_IT_TE7); 可行吗
-        MPU6050_Abort(IMU_ERROR_DMA);
-        return;
-    }
-    if (DMA_GetITStatus(DMA1_IT_TC7) == SET)
-    {
-        DMA_ClearFlag(DMA1_FLAG_GL7);
-        if (imu_status == IMU_STATUS_BUSY && imu_stage == IMU_STAGE_DMA)
-        {
-            I2C_DMACmd(I2C1, DISABLE);
-            DMA_Cmd(DMA1_Channel7, DISABLE);
-            I2C_GenerateSTOP(I2C1, ENABLE);
-            /* Retain LAST until STOP finishes, rather than changing the final ACK. */
-            imu_stage = IMU_STAGE_STOP;
-        }
-    }
-}
+// void DMA1_Channel7_IRQHandler(void)
+// {
+//     if (DMA_GetITStatus(DMA1_IT_TE7) == SET)
+//     {
+//         DMA_ClearFlag(DMA1_FLAG_GL7);
+//         // DMA_ClearITPendingBit(DMA1_IT_TE7); 可行吗
+//         MPU6050_Abort(IMU_ERROR_DMA);
+//         return;
+//     }
+//     if (DMA_GetITStatus(DMA1_IT_TC7) == SET) // 传输完成
+//     {
+//         DMA_ClearFlag(DMA1_FLAG_GL7);
+//         if (imu_status == IMU_STATUS_BUSY && imu_stage == IMU_STAGE_DMA)
+//         {
+//             I2C_DMACmd(I2C1, DISABLE);
+//             DMA_Cmd(DMA1_Channel7, DISABLE);
+//             I2C_GenerateSTOP(I2C1, ENABLE);
+//             /* Retain LAST until STOP finishes, rather than changing the final ACK. */
+//             imu_stage = IMU_STAGE_STOP;
+//         }
+//     }
+// }
 
 void IMU_Task(void)
 {
@@ -461,6 +462,16 @@ void IMU_Task(void)
         }
     }
     // __set_PRIMASK(irq_state);
+    if (GetTick() - task[1].LastTime >= task[1].TimReload && task[1].flag == 1)
+    {
+        
+        if (imu_status == IMU_STATUS_READY) IMU_ReadData(I2C1, (MPU6050_t *)&imudata);
+        // {
+        //     IMU_UpdateAngles((MPU6050_t *)&imudata);
+        // }
+        task[1].LastTime = GetTick();
+        task[1].flag = 0;
+    }
 }
 
 static float Kalman_getAngle(Kalman_t *kalman, float angle, float rate, float dt)
@@ -539,12 +550,14 @@ static void IMU_UpdateAngles(MPU6050_t *data)
     previous_frame_ms = frame_start_ms;
 }
 
-ErrorStatus IMU_ReadData(I2C_TypeDef *I2Cx, MPU6050_t *imuData)
+// ErrorStatus IMU_ReadData(I2C_TypeDef *I2Cx, MPU6050_t *imuData)
+void IMU_ReadData(I2C_TypeDef *I2Cx, MPU6050_t *imuData)
 {
     MPU6050_t sample;
     uint32_t irq_state;
     if (I2Cx != I2C1 || imuData == NULL || imu_status != IMU_STATUS_READY)
-        return ERROR;
+        // return ERROR;
+        return;
 
     sample.Accel_X_RAW = MPU6050_DecodeWord(0U);
     sample.Accel_Y_RAW = MPU6050_DecodeWord(2U);
@@ -568,7 +581,7 @@ ErrorStatus IMU_ReadData(I2C_TypeDef *I2Cx, MPU6050_t *imuData)
     imu_error = IMU_ERROR_NONE;
     imu_status = IMU_STATUS_IDLE;
     __set_PRIMASK(irq_state);
-    return SUCCESS;
+    // return SUCCESS;
 }
 
 IMU_Status_t IMU_GetStatus(void)

@@ -8,6 +8,7 @@ uint32_t GetTick() {
 }
 
 void SysTickInit() {
+  SystemCoreClockUpdate();
 	if (SysTick_Config(SystemCoreClock / 1000)) { // 1ms一次
 		while (1);
 	}
@@ -21,5 +22,5 @@ void SysTickInit() {
 void SysTick_Handler(void)
 {
     ++uwTick;
-    Tasks_Tick();
+    // Tasks_Tick();
 }

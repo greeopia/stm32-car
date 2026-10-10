@@ -140,7 +140,8 @@ void IMU_Task(void);
  * 注意：此函数不启动I2C通信、不等待DMA；一帧只能成功取出一次。
  *       换算和滤波在调用处执行，建议放在主循环，不放在中断中。
  */
-ErrorStatus IMU_ReadData(I2C_TypeDef *I2Cx, MPU6050_t *imuData);
+// ErrorStatus IMU_ReadData(I2C_TypeDef *I2Cx, MPU6050_t *imuData);
+void IMU_ReadData(I2C_TypeDef *I2Cx, MPU6050_t *imuData);
 
 /*功能：查询当前状态；READY后调用IMU_ReadData()，IDLE时才启动下一帧。*/
 IMU_Status_t IMU_GetStatus(void);

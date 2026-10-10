@@ -1,4 +1,5 @@
 #include "PID.h"
+#include "motor.h"
 
 //定义结构体
 // PID servo_pid;
@@ -14,13 +15,13 @@
 /**
  * ************************************************************************
  * @brief 增量式PID参数的初始化
- * 
+ *
  * @param[in] pid  pid指针
  * @param[in] p  初始化设定的p
  * @param[in] i  初始化设定的i
  * @param[in] d  初始化设定的d
  * @param[in] maxOutput  输出限幅值
- * 
+ *
  * ************************************************************************
  */
 void Incremental_PID_Init(PID *pid, float p, float i, float d, float minOutput, float maxOutput)
@@ -35,17 +36,17 @@ void Incremental_PID_Init(PID *pid, float p, float i, float d, float minOutput, 
 /**
  * ************************************************************************
  * @brief 增量式PID控制器
- *          
+ *
  * @param[in] pid  pid指针
  * @param[in] set_value  目标值
  * @param[in] get_value  反馈值
- * 
+ *
  * ************************************************************************
  */
 void Incremental_PID_Cal(PID *pid, float set_value,float get_value)
 {
 	pid->error = set_value - get_value;  // 目标值 - 实际值    									        //计算偏差
-	pid->output += pid->kp*(pid->error - pid->lastError) + pid->ki*pid->error + 
+	pid->output += pid->kp*(pid->error - pid->lastError) + pid->ki*pid->error +
 				pid->kd*(pid->error - 2*pid->lastError + pid->lastlastError);			//增量式PI控制器
 	pid->lastlastError = pid->lastError;    											//保存上上次误差
 	pid->lastError = pid->error;	           											//保存上一次偏差
@@ -54,21 +55,20 @@ void Incremental_PID_Cal(PID *pid, float set_value,float get_value)
         pid->output = pid->maxOutput;                                                   //输出限幅
     else if (pid->output < pid->minOutput)
         pid->output = pid->minOutput;													//输出限幅
-
 }
 
 
 /**
  * ************************************************************************
  * @brief 位置式PID参数的初始化
- * 
+ *
  * @param[in] pid  pid指针
  * @param[in] p  初始化设定的p
  * @param[in] i  初始化设定的i
  * @param[in] d  初始化设定的d
  * @param[in] maxI  积分限幅值
  * @param[in] maxOutput  输出限幅值
- * 
+ *
  * ************************************************************************
  */
 void Positional_PID_Init (PID *pid, float p, float i, float d, float maxI,float minOutput, float maxOutput)
@@ -84,11 +84,11 @@ void Positional_PID_Init (PID *pid, float p, float i, float d, float maxI,float 
 /**
  * ************************************************************************
  * @brief 位置式PID控制器
- * 
+ *
  * @param[in] pid  pid结构体
  * @param[in] set_value  目标值
  * @param[in] get_value  反馈值
- * @note 可能imu用
+ * @note 可能imu && 循线用
  * ************************************************************************
  */
 void Positional_PID_Cal(PID *pid,float set_value, float get_value) {
@@ -128,14 +128,18 @@ void PID_Reset(PID *pid)
     pid->output = 0.0f;
 }
 
-extern float speedl, speedr;
-//PID左电机设置速度
+// 左轮正转速度PI，输出范围由motor_pid_init()设置为0~1。
 static float L_filter_speed = 0.0f;  //上一次滤波后的速度
 static float R_filter_speed = 0.0f;  //上一次滤波后的速度
-void PID_Lmotor(int target)
-{    
-    // //最新获取的编码器的值
-    // float now_speed = -motor.encoder1_counts * 1.0f;
+void PID_Lmotor(float target)
+{
+    if (target <= 0.0f)
+    {
+        PID_Reset(&Lmotor_PID);
+        L_filter_speed = 0.0f;
+        return;
+    }
+    if (target > MOTOR_TARGET_MAX_MPS) target = MOTOR_TARGET_MAX_MPS;
 
     //一阶低通滤波
     float filt = 0.90f;
@@ -143,20 +147,23 @@ void PID_Lmotor(int target)
     L_filter_speed = filter_speed;  //更新保存
 
     //将滤波后的值用于PID
-    speedl = filter_speed;
+    // speedl = filter_speed;
 
     //解算PID获得电机输出
-    Incremental_PID_Cal(&Lmotor_PID,target,speedl);
+    Incremental_PID_Cal(&Lmotor_PID,target,filter_speed);
 
-    // if(Lmotor_PID.output < 0) motor.set_motor1(1,-Lmotor_PID.output);
-    // else motor.set_motor1(0,Lmotor_PID.output);
 }
 
-//PID右电机设置速度
-void PID_Rmotor(int target)
+// 右轮正转速度PI，负目标按停止处理。
+void PID_Rmotor(float target)
 {
-    // //最新获取的编码器的值
-    // float now_speed = -motor.encoder2_counts * 1.0f;
+    if (target <= 0.0f)
+    {
+        PID_Reset(&Rmotor_PID);
+        R_filter_speed = 0.0f;
+        return;
+    }
+    if (target > MOTOR_TARGET_MAX_MPS) target = MOTOR_TARGET_MAX_MPS;
 
     //一阶低通滤波
     float filt = 0.90f;
@@ -164,13 +171,11 @@ void PID_Rmotor(int target)
     R_filter_speed = filter_speed;  //更新保存
 
     //将滤波后的值用于PID
-    speedr = filter_speed;
+    // speedr = filter_speed;
 
     //解算PID获得电机输出
-    Incremental_PID_Cal(&Rmotor_PID,target,speedr);
+    Incremental_PID_Cal(&Rmotor_PID,target,filter_speed);
 
-    // if(Rmotor_PID.output < 0) motor.set_motor2(1,-Rmotor_PID.output);
-    // else motor.set_motor2(0,Rmotor_PID.output);
 }
 
 // //PID智能车平滑起步，防止电机猛转
@@ -181,11 +186,11 @@ void PID_Rmotor(int target)
 //     if(step <= 0) return;
 
 //     //读取编码器数据
-//     motor.update_encoders(); 
+//     motor.update_encoders();
 
 //     //根据实际情况决定速度值
-//     L_speed = -motor.encoder1_counts * 1.0f;
-//     R_speed = -motor.encoder2_counts * 1.0f;
+//     L_speed = speedl;
+//     R_speed = speedr;
 
 //     //通过单边电机判断，先对预设值赋值，使两电机初始限幅为0，以便于平滑启动
 //     if(left_speed->maxOutput > limit_p)
@@ -208,7 +213,7 @@ void PID_Rmotor(int target)
 //         left_speed->maxOutput += limit_p/step;
 //         right_speed->maxOutput += limit_p/step;
 //         //防止电机实际限幅值超出预设值
-//         left_speed->maxOutput = left_speed->maxOutput > limit_p ? limit_p : left_speed->maxOutput; 
+//         left_speed->maxOutput = left_speed->maxOutput > limit_p ? limit_p : left_speed->maxOutput;
 //         right_speed->maxOutput = right_speed->maxOutput > limit_p ? limit_p : right_speed->maxOutput;
 //     }
 
@@ -262,7 +267,7 @@ void PD_FF_Cal(PD_FF* pd, float target, float actual)
     float raw_target_acc = (target - pd->last_target) / pd->dt;
 
     //低通滤波
-    float beta = 0.8f; 
+    float beta = 0.8f;
     float filtered_target_acc = beta * raw_target_acc + (1.0f - beta) * pd->last_target_acc;
     pd->last_target_acc = filtered_target_acc;
 

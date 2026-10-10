@@ -14,7 +14,7 @@ typedef struct
 } PID;
 
 //PD+前馈控制结构体
-typedef struct 
+typedef struct
 {
     float Kp;       //比例系数
     float Kd;       //微分系数
@@ -49,8 +49,9 @@ void Positional_PID_Cal(PID *pid,float set_value, float get_value);
 
 void PID_Reset(PID *pid);   //清除PID环的任何时刻误差、积分、输出
 
-void PID_Lmotor(int target);
-void PID_Rmotor(int target);
+/* 电机仅正转：target单位m/s，非正目标停止输出，正目标上限见motor.h。 */
+void PID_Lmotor(float target);
+void PID_Rmotor(float target);
 // void PID_CarStart(float target, float now_value, int step, PID *left_speed, PID *right_speed);
 
 //PD+前馈 控制
@@ -61,15 +62,15 @@ void PD_FF_Cal(PD_FF* pd, float target, float actual);
 
 //声明结构体
 // extern PID servo_pid;
-extern PID Lmotor_PID; //左电机PID
-extern PID Rmotor_PID; //右电机PID
+extern PID Lmotor_PID; //左电机PI，占空比输出0~1
+extern PID Rmotor_PID; //右电机PI，占空比输出0~1
 // extern PID Photo_PID;  //图像环
 extern PID Angle_PID;  //角速度环(转向环)
 extern PID IR_PID;     //巡线环
 // extern PD_FF Angle_PID_F;  //角速度环
-// extern PID Temp_PID;   //临时角度环（偏航角,避障、进圆环用） 
+// extern PID Temp_PID;   //临时角度环（偏航角,避障、进圆环用）
 
-extern PID servo_pid, makeup_pid;
+// extern PID servo_pid, makeup_pid;
 
 #endif
 

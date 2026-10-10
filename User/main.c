@@ -6,8 +6,8 @@
 #include "OLED.h"
 #include "BlueTooth.h"
 #include "IR.h"
-#include "IMU.h"
-#include "PID.h"
+#include "vofa.h"
+// #include "IMU.h"
 
 
 int main(){
@@ -18,11 +18,18 @@ int main(){
 	OLED_Init();
 	motor_init();
 	Encoder_init();
-	IMU_init();
-	BlueTooth_init();
+	Target_AD_Init();
+	vofa_init();
+	// IMU_init();
+	// BlueTooth_init();
+
+	Task_Init(task, sizeof(task)/sizeof(task[0]));
 	while(1) {
+		// IMU_Task();
+
 		Tasks_Run();
 		// OLED_ShowNum(3, 1, (uint32_t)TIM2->CNT, 4);
 		// OLED_ShowNum(4, 1, (uint32_t)TIM3->CNT, 4);
+
 	}
 }
