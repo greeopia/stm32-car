@@ -1,3 +1,4 @@
-// #pragma once
+#pragma once
 
-// void BlueTooth_init();
+void BlueTooth_init();
+void BlueToothVofa_Task();

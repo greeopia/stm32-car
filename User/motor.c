@@ -55,8 +55,8 @@ void motor_init(void) {
 }
 
 static void motor_pid_init(void) {
-	Incremental_PID_Init(&Lmotor_PID, 0.5f, 0.1f, 0.0f, 0.0f, 1.0f);
-	Incremental_PID_Init(&Rmotor_PID, 0.5f, 0.1f, 0.0f, 0.0f, 1.0f);
+	Incremental_PID_Init(&Lmotor_PID, 0.75f, 0.15f, 0.0f, 0.0f, 1.0f);
+	Incremental_PID_Init(&Rmotor_PID, 0.75f, 0.15f, 0.0f, 0.0f, 1.0f); // 0.65 0.2
 }
 
 float GetDutyl(void) {
@@ -130,6 +130,7 @@ float GetMotorCountr(void) {
 }
 
 float speedl = 0.0f, speedr = 0.0f; // 正转速度，m/s
+volatile float LmotorTarget, RmotorTarget; // 正转速度目标，m/s
 
 void motor_Task(void) { // PI: 正转速度 -> 0~1占空比
 	static float LastCountl = 0, LastCountr = 0;
@@ -146,10 +147,9 @@ void motor_Task(void) { // PI: 正转速度 -> 0~1占空比
 	speedr = (Countr - LastCountr) / (NowTick - LastTick) * 1000.0f;
 	LastTick = NowTick; LastCountl = Countl; LastCountr = Countr;
 
-
-	float target = GetTarget();
-	PID_Lmotor(target);
-	PID_Rmotor(target);
+	// float target = GetTarget(); // 0~3
+	PID_Lmotor(LmotorTarget);
+	PID_Rmotor(RmotorTarget);
 
 	SetDutyl(Lmotor_PID.output);
 	SetDutyr(Rmotor_PID.output);
@@ -185,7 +185,9 @@ void Target_AD_Init(void) { // PA1
 	ADC_InitStructure.ADC_ContinuousConvMode = ENABLE;     //连续转换，失能，每转换一次规则组序列后停止
 	ADC_InitStructure.ADC_ScanConvMode = DISABLE;           //扫描模式，失能，只转换规则组的序列1这一个位置
 	ADC_InitStructure.ADC_NbrOfChannel = 1;                 //通道数，为1，仅在扫描模式下，才需要指定大于1的数，在非扫描模式下，只能是1
-	ADC_Init(ADC1, &ADC_InitStructure);                     //将结构体变量交给ADC_Init，配置ADC2
+	ADC_Init(ADC1, &ADC_InitStructure);                     //将结构体变量交给ADC_Init，配置ADC1
+
+	ADC_RegularChannelConfig(ADC1, ADC_Channel_1, 1, ADC_SampleTime_7Cycles5);
 
 	/*DMA初始化*/
 	DMA_InitTypeDef DMA_InitStructure;											//定义结构体变量
@@ -218,5 +220,7 @@ void Target_AD_Init(void) { // PA1
 }
 
 float GetTarget(void) { // 正转目标速度：电位器全量程对应0~3m/s。
-	return (float)AD_Value / 4095.0f * MOTOR_TARGET_MAX_MPS;
+	float temp_target = 1.0f*AD_Value / 4095.0f * 3.0f;
+	if (temp_target < 0.1f) temp_target = 0.0f;
+	return temp_target;
 }

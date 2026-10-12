@@ -97,8 +97,8 @@ virtualFolder:
         - path: User/OLED.c
         - path: User/OLED.h
         - path: User/OLED_Font.h
-        - path: User/mpu6050.c
-        - path: User/mpu6050.h
+        - path: User/Delay.c
+        - path: User/Delay.h
       folders: []
     - name: ::CMSIS
       files: []

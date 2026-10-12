@@ -46,8 +46,16 @@ void Incremental_PID_Init(PID *pid, float p, float i, float d, float minOutput, 
 void Incremental_PID_Cal(PID *pid, float set_value,float get_value)
 {
 	pid->error = set_value - get_value;  // 目标值 - 实际值    									        //计算偏差
-	pid->output += pid->kp*(pid->error - pid->lastError) + pid->ki*pid->error +
-				pid->kd*(pid->error - 2*pid->lastError + pid->lastlastError);			//增量式PI控制器
+    // if (pid->error > -0.1f && pid->error < 0.1f) pid->error = 0.0f; // 死区：±0.1内视为无偏差（只针对这个电机）
+
+    float errori;
+    if (pid->error < -0.1f) errori = pid->error + 0.1f;
+    else if (pid->error > 0.1f) errori = pid->error - 0.1f;
+    else errori = 0.0f; // 死区：±0.1内视为无偏差（只针对这个电机）
+    // float errori = pid->error; // 积分不死区
+
+	pid->output += pid->kp * (pid->error - pid->lastError) + pid->ki * errori + 
+				pid->kd * (pid->error - 2*pid->lastError + pid->lastlastError);			//增量式PI控制器
 	pid->lastlastError = pid->lastError;    											//保存上上次误差
 	pid->lastError = pid->error;	           											//保存上一次偏差
 
@@ -139,19 +147,17 @@ void PID_Lmotor(float target)
         L_filter_speed = 0.0f;
         return;
     }
-    if (target > MOTOR_TARGET_MAX_MPS) target = MOTOR_TARGET_MAX_MPS;
 
-    //一阶低通滤波
-    float filt = 0.90f;
-    float filter_speed = filt * speedl + (1 - filt) * L_filter_speed;
-    L_filter_speed = filter_speed;  //更新保存
+    // //一阶低通滤波
+    // float filt = 0.90f;
+    // float filter_speed = filt * speedl + (1 - filt) * L_filter_speed;
+    // L_filter_speed = filter_speed;  //更新保存
 
     //将滤波后的值用于PID
     // speedl = filter_speed;
 
     //解算PID获得电机输出
-    Incremental_PID_Cal(&Lmotor_PID,target,filter_speed);
-
+    Incremental_PID_Cal(&Lmotor_PID,target,speedl);
 }
 
 // 右轮正转速度PI，负目标按停止处理。
@@ -163,19 +169,17 @@ void PID_Rmotor(float target)
         R_filter_speed = 0.0f;
         return;
     }
-    if (target > MOTOR_TARGET_MAX_MPS) target = MOTOR_TARGET_MAX_MPS;
 
-    //一阶低通滤波
-    float filt = 0.90f;
-    float filter_speed = filt * speedr + (1 - filt) * R_filter_speed;
-    R_filter_speed = filter_speed;  //更新保存
+    // //一阶低通滤波
+    // float filt = 0.90f;
+    // float filter_speed = filt * speedr + (1 - filt) * R_filter_speed;
+    // R_filter_speed = filter_speed;  //更新保存
 
     //将滤波后的值用于PID
     // speedr = filter_speed;
 
     //解算PID获得电机输出
-    Incremental_PID_Cal(&Rmotor_PID,target,filter_speed);
-
+    Incremental_PID_Cal(&Rmotor_PID,target,speedr);
 }
 
 // //PID智能车平滑起步，防止电机猛转

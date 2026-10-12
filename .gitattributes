@@ -1,0 +1,15 @@
+# 代码文件换行符统一限定为 LF
+*.c        text eol=lf
+*.h        text eol=lf
+*.cpp      text eol=lf
+*.hpp      text eol=lf
+*.cc       text eol=lf
+*.cxx      text eol=lf
+*.inc      text eol=lf
+*.s        text eol=lf
+*.asm      text eol=lf
+*.ld       text eol=lf
+*.sct      text eol=lf
+*.icf      text eol=lf
+*.uvprojx  text eol=lf
+*.uvoptx   text eol=lf

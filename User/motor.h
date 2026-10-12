@@ -2,8 +2,6 @@
 
 #include <stdint.h>
 
-#define MOTOR_TARGET_MAX_MPS 3.0f
-
 /* 两轮仅正转；占空比范围为0~1，负值按0处理。 */
 void motor_init(void);
 float GetDutyl(void);
@@ -16,6 +14,8 @@ float GetMotorCountl(void);
 float GetMotorCountr(void);
 
 extern float speedl, speedr; // 正转速度，m/s
+extern volatile float LmotorTarget, RmotorTarget; // 正转速度目标，m/s
+
 
 void motor_Task(void);
 
