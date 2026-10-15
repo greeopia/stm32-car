@@ -83,3 +83,5 @@ static uint8_t DMA_Send(const void *data, uint16_t len) {
 
 IR: 滑动平均滤波 中位值滤波(优先队列 双堆法 平衡二叉搜索树/跳表)
 
+用uint8_t的掩码来标记7个红外传感器 
+

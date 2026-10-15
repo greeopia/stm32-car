@@ -60,23 +60,23 @@ static void motor_pid_init(void) {
 }
 
 float GetDutyl(void) {
-	return 1.0f*TIM1->CCR1/(TIM1->ARR+1);
+	return 1.0f*TIM1->CCR2/(TIM1->ARR+1);
 }
 
 float GetDutyr(void) {
-	return 1.0f*TIM1->CCR2/(TIM1->ARR+1);
+	return 1.0f*TIM1->CCR1/(TIM1->ARR+1);
 }
 
 void SetDutyl(float duty) {
 	if (duty < 0.0f) duty = 0.0f;
 	if (duty > 1.0f) duty = 1.0f;
-	TIM1->CCR1 = (uint16_t)(duty * (TIM1->ARR+1));
+	TIM1->CCR2 = (uint16_t)(duty * (TIM1->ARR+1));
 }
 
 void SetDutyr(float duty) {
 	if (duty < 0.0f) duty = 0.0f;
 	if (duty > 1.0f) duty = 1.0f;
-	TIM1->CCR2 = (uint16_t)(duty * (TIM1->ARR+1));
+	TIM1->CCR1 = (uint16_t)(duty * (TIM1->ARR+1));
 }
 
 void Encoder_init(void) {
@@ -114,7 +114,7 @@ static const float WHEEL_RADIUS = 0.033f; // m
 #define PI          3.14159265f
 #endif
 float GetMotorCountl(void) { // 当前计数值对应的路程，m
-	uint16_t cnt = TIM2->CNT;
+	uint16_t cnt = TIM3->CNT;
 	// TIM2->CNT = 0;
 
 	float Countl = (1.0f*cnt/20)*2*PI*WHEEL_RADIUS;
@@ -122,7 +122,7 @@ float GetMotorCountl(void) { // 当前计数值对应的路程，m
 }
 
 float GetMotorCountr(void) {
-	uint16_t cnt = TIM3->CNT;
+	uint16_t cnt = TIM2->CNT;
 	// TIM3->CNT = 0;
 
 	float Countr = (1.0f*cnt/20)*2*PI*WHEEL_RADIUS;
@@ -131,6 +131,7 @@ float GetMotorCountr(void) {
 
 float speedl = 0.0f, speedr = 0.0f; // 正转速度，m/s
 volatile float LmotorTarget, RmotorTarget; // 正转速度目标，m/s
+extern float base_speed;
 
 void motor_Task(void) { // PI: 正转速度 -> 0~1占空比
 	static float LastCountl = 0, LastCountr = 0;
@@ -148,8 +149,11 @@ void motor_Task(void) { // PI: 正转速度 -> 0~1占空比
 	LastTick = NowTick; LastCountl = Countl; LastCountr = Countr;
 
 	// float target = GetTarget(); // 0~3
-	PID_Lmotor(LmotorTarget);
-	PID_Rmotor(RmotorTarget);
+	PID_Lmotor(0.8f);
+	PID_Rmotor(0.8f);
+
+	// PID_Lmotor(LmotorTarget);
+	// PID_Rmotor(RmotorTarget);
 
 	SetDutyl(Lmotor_PID.output);
 	SetDutyr(Rmotor_PID.output);
