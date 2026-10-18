@@ -220,10 +220,10 @@ void BlueToothVofa_Task() {
 	float target = GetTarget();
     TxFrame.fdata[0] = speedl;
     TxFrame.fdata[1] = speedr; // 实际速度
-    TxFrame.fdata[2] = LmotorTarget; 
-    TxFrame.fdata[3] = RmotorTarget; 
-	// TxFrame.fdata[2] = target; // 左轮正转目标，0~3m/s
-    // TxFrame.fdata[3] = target; // 右轮使用同一次ADC读数
+    // TxFrame.fdata[2] = LmotorTarget; 
+    // TxFrame.fdata[3] = RmotorTarget; 
+	TxFrame.fdata[2] = target; // 左轮正转目标，0~3m/s
+    TxFrame.fdata[3] = target; // 右轮使用同一次ADC读数
 
     TxFrame.fdata[4] = GetDutyl(); // 左轮占空比，0~1
     TxFrame.fdata[5] = GetDutyr(); // 右轮占空比，0~1

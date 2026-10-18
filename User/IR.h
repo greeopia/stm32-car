@@ -28,3 +28,5 @@ extern IR_State_t IR_State;
 void IR_init(void);
 
 void IR_Task(void);
+
+extern float bias;

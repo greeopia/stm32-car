@@ -32,7 +32,8 @@ int main(){
 
 	OLED_ShowString(1, 1, "motor");
 	OLED_ShowString(1, 7, "turn");
-	while(/*GPIO_ReadInputDataBit(GPIOA, GPIO_Pin_7) == Bit_SET*/1){
+	// while(GPIO_ReadInputDataBit(GPIOA, GPIO_Pin_7) == Bit_SET){
+	while(1){
 		// IMU_Task();
 		Tasks_Run();
 		// OLED_ShowNum(2, 1, (uint32_t)(Lmotor_PID.kp*100), 4);

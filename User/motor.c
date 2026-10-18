@@ -148,9 +148,9 @@ void motor_Task(void) { // PI: 正转速度 -> 0~1占空比
 	speedr = (Countr - LastCountr) / (NowTick - LastTick) * 1000.0f;
 	LastTick = NowTick; LastCountl = Countl; LastCountr = Countr;
 
-	// float target = GetTarget(); // 0~3
-	PID_Lmotor(0.8f);
-	PID_Rmotor(0.8f);
+	float target = GetTarget(); // 0~3
+	PID_Lmotor(target);
+	PID_Rmotor(target);
 
 	// PID_Lmotor(LmotorTarget);
 	// PID_Rmotor(RmotorTarget);
