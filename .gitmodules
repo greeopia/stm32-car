@@ -1,0 +1,9 @@
+[submodule "kalman_filter"]
+    path = kalman_filter
+    url = https://github.com/xiahouzuoxin/kalman_filter
+    branch = main
+
+[submodule "cJSON"]
+    path = cJSON
+    url = https://github.com/davegamble/cjson
+    branch = master

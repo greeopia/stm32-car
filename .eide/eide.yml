@@ -3,10 +3,42 @@ name: project
 type: ARM
 deviceName: null
 packDir: .pack/Keil/STM32F1xx_DFP.2.3.0
-srcDirs: []
+srcDirs:
+  - cJSON
 virtualFolder:
   name: <virtual_root>
-  files: []
+  files:
+    - path: User/BlueTooth.c
+    - path: User/BlueTooth.h
+    - path: User/Delay.c
+    - path: User/Delay.h
+    - path: User/filter.c
+    - path: User/filter.h
+    - path: User/IMU.c
+    - path: User/IMU.h
+    - path: User/IR.c
+    - path: User/IR.h
+    - path: User/main.c
+    - path: User/motor.c
+    - path: User/motor.h
+    - path: User/OLED.c
+    - path: User/OLED.h
+    - path: User/OLED_Font.h
+    - path: User/PID.c
+    - path: User/PID.h
+    - path: User/SpeedDecision.c
+    - path: User/SpeedDecision.h
+    - path: User/stm32f10x_conf.h
+    - path: User/stm32f10x_it.c
+    - path: User/stm32f10x_it.h
+    - path: User/SysTick.c
+    - path: User/SysTick.h
+    - path: User/Tasks.c
+    - path: User/Tasks.h
+    - path: User/vofa.c
+    - path: User/vofa.h
+    - path: kalman_filter/kalman_filter.c
+    - path: kalman_filter/kalman_filter.h
   folders:
     - name: Start
       files:
@@ -122,7 +154,9 @@ targets:
         - .cmsis/include
         - RTE/_Target_1
       libList: []
-    excludeList: []
+    excludeList:
+      - <virtual_root>/cJSON_Utils.c
+      - <virtual_root>/cJSON.c
     settings:
       debugger: cortex-debug
     toolchain: AC5

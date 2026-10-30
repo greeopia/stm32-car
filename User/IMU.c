@@ -441,8 +441,8 @@ void I2C1_EV_IRQHandler(void)
 
 void IMU_Task(void)
 {
-    // uint32_t irq_state = __get_PRIMASK();
-    // __disable_irq();
+    uint32_t irq_state = __get_PRIMASK();
+    __disable_irq();
     if (imu_status == IMU_STATUS_BUSY)
     {
         if (imu_stage == IMU_STAGE_STOP &&
@@ -461,7 +461,7 @@ void IMU_Task(void)
             MPU6050_Abort(IMU_ERROR_TIMEOUT);
         }
     }
-    // __set_PRIMASK(irq_state);
+    __set_PRIMASK(irq_state);
     if (GetTick() - task[1].LastTime >= task[1].TimReload && task[1].flag == 1)
     {
         

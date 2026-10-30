@@ -11,6 +11,7 @@ typedef struct
     float error,lastError,lastlastError;    //误差、上次误差、上上次误差
     float integral,maxIntegral;             //积分、积分限幅
     float output,maxOutput,minOutput;       //输出、输出限幅
+    // float filterd_output; // 为了解耦我也是没辙了
 } PID;
 
 //PD+前馈控制结构体
@@ -31,7 +32,7 @@ typedef struct
     float error;              //本次误差
     float last_error;         //上一次的误差
     float last_target;        //上一次的目标角速度
-    float last_derivative;    //上一次的微分项（用于低通滤波)
+    float last_derivative;    //上一次的微分项（用于低通滤波）
     float last_target_acc;    //上一次的目标角速度变化律（用于低通滤波）
 
 } PD_FF;
@@ -50,8 +51,8 @@ void Positional_PID_Cal(PID *pid,float set_value, float get_value);
 void PID_Reset(PID *pid);   //清除PID环的任何时刻误差、积分、输出
 
 /* 电机仅正转：target单位m/s，非正目标停止输出，正目标上限见motor.h。 */
-void PID_Lmotor(float target);
-void PID_Rmotor(float target);
+void PID_Lmotor(PID* pid, float target);
+void PID_Rmotor(PID* pid, float target);
 // void PID_CarStart(float target, float now_value, int step, PID *left_speed, PID *right_speed);
 
 //PD+前馈 控制

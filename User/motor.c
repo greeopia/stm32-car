@@ -2,8 +2,9 @@
 #include "PID.h"
 #include "motor.h"
 #include "SysTick.h"
+#include "filter.h"
 
-static void motor_pid_init(void);
+static void motor_arg_init(void);
 
 void motor_init(void) {
 	// PWM引脚
@@ -51,10 +52,13 @@ void motor_init(void) {
 	GPIO_ResetBits(GPIOB, GPIO_Pin_12 | GPIO_Pin_14); // IN1、IN3低电平
 	GPIO_SetBits(GPIOB, GPIO_Pin_13 | GPIO_Pin_15); // IN2、IN4高电平
 
-	motor_pid_init();
+	motor_arg_init();
 }
 
-static void motor_pid_init(void) {
+static void motor_arg_init(void) {
+	kalman1_init(&Lmotor_Filter, 0, 0.01f);
+	kalman1_init(&Rmotor_Filter, 0, 0.01f);
+
 	Incremental_PID_Init(&Lmotor_PID, 0.75f, 0.15f, 0.0f, 0.0f, 1.0f);
 	Incremental_PID_Init(&Rmotor_PID, 0.75f, 0.15f, 0.0f, 0.0f, 1.0f); // 0.65 0.2
 }
@@ -130,13 +134,23 @@ float GetMotorCountr(void) {
 }
 
 float speedl = 0.0f, speedr = 0.0f; // 正转速度，m/s
+// volatile uint16_t pulse_l_100ms = 0, pulse_r_100ms = 0;
 volatile float LmotorTarget, RmotorTarget; // 正转速度目标，m/s
 extern float base_speed;
 
+#define VOFA_SHOW_RAW_PULSES 0
+
 void motor_Task(void) { // PI: 正转速度 -> 0~1占空比
 	static float LastCountl = 0, LastCountr = 0;
+	static uint16_t LastPulseL = 0, LastPulseR = 0;
 	static uint32_t LastTick = 0;
 	float Countl = GetMotorCountl(), Countr = GetMotorCountr();
+#if VOFA_SHOW_RAW_PULSES
+	uint16_t PulseL = TIM3->CNT, PulseR = TIM2->CNT;
+	pulse_l_100ms = (uint16_t)(PulseL - LastPulseL);
+	pulse_r_100ms = (uint16_t)(PulseR - LastPulseR);
+	LastPulseL = PulseL; LastPulseR = PulseR;
+#endif
 	if (LastCountl > Countl || LastCountr > Countr) { // 计数器溢出
 		LastCountl = Countl;
 		LastCountr = Countr;
@@ -148,9 +162,14 @@ void motor_Task(void) { // PI: 正转速度 -> 0~1占空比
 	speedr = (Countr - LastCountr) / (NowTick - LastTick) * 1000.0f;
 	LastTick = NowTick; LastCountl = Countl; LastCountr = Countr;
 
-	float target = GetTarget(); // 0~3
-	PID_Lmotor(target);
-	PID_Rmotor(target);
+	// float target = GetTarget(); // 0~3
+	// 滤波还是分离出来吧 speedx -> x_filter_speed
+
+	L_filter_speed = kalman1_filter(&Lmotor_Filter, speedl);
+	R_filter_speed = kalman1_filter(&Rmotor_Filter, speedr);
+
+	PID_Lmotor(&Lmotor_PID, LmotorTarget);
+	PID_Rmotor(&Rmotor_PID, RmotorTarget);
 
 	// PID_Lmotor(LmotorTarget);
 	// PID_Rmotor(RmotorTarget);
@@ -158,13 +177,6 @@ void motor_Task(void) { // PI: 正转速度 -> 0~1占空比
 	SetDutyl(Lmotor_PID.output);
 	SetDutyr(Rmotor_PID.output);
 }
-//    // 计算转向误差（头文件已定义ImageStatus）
-//     float turn_error = ImageStatus.Det_True - (float)ImageStatus.MiddleLine;
-//     // 误差死区：±2内视为无偏差
-//     if (turn_error > -1.0f && turn_error < 1.0f)
-//     {
-//         turn_error = 0;
-//     }
 
 volatile uint16_t AD_Value; // DMA传输的ADC值
 

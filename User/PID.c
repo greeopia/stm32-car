@@ -137,13 +137,13 @@ void PID_Reset(PID *pid)
 }
 
 // 左轮正转速度PI，输出范围由motor_pid_init()设置为0~1。
-static float L_filter_speed = 0.0f;  //上一次滤波后的速度
-static float R_filter_speed = 0.0f;  //上一次滤波后的速度
-void PID_Lmotor(float target)
+extern float L_filter_speed;  
+extern float R_filter_speed;  
+void PID_Lmotor(PID* pid, float target)
 {
     if (target <= 0.0f)
     {
-        PID_Reset(&Lmotor_PID);
+        PID_Reset(pid);
         L_filter_speed = 0.0f;
         return;
     }
@@ -157,15 +157,15 @@ void PID_Lmotor(float target)
     // speedl = filter_speed;
 
     //解算PID获得电机输出
-    Incremental_PID_Cal(&Lmotor_PID,target,speedl);
+    Incremental_PID_Cal(pid,target,L_filter_speed);
 }
 
 // 右轮正转速度PI，负目标按停止处理。
-void PID_Rmotor(float target)
+void PID_Rmotor(PID* pid, float target)
 {
     if (target <= 0.0f)
     {
-        PID_Reset(&Rmotor_PID);
+        PID_Reset(pid);
         R_filter_speed = 0.0f;
         return;
     }
@@ -179,7 +179,7 @@ void PID_Rmotor(float target)
     // speedr = filter_speed;
 
     //解算PID获得电机输出
-    Incremental_PID_Cal(&Rmotor_PID,target,speedr);
+    Incremental_PID_Cal(pid,target,speedr);
 }
 
 // //PID智能车平滑起步，防止电机猛转
@@ -257,12 +257,13 @@ void PD_FF_Cal(PD_FF* pd, float target, float actual)
     if (pd->dt <= 0.0f) pd->dt = 0.001f;
 
     //误差
-    pd->error = target - actual;
+    pd->error = target - actual; // 目标值 - 实际值
 
     //微分
-    float derivative = (pd->error - pd->last_error) / pd->dt;
+    float derivative = (pd->error - pd->last_error) / pd->dt; // 形式看来更标准了
 
     //低通滤波
+    // TODO
     float alpha = 0.8f;
     derivative = alpha * derivative + (1.0f-alpha) * pd->last_derivative;
     pd->last_derivative = derivative;
@@ -271,6 +272,7 @@ void PD_FF_Cal(PD_FF* pd, float target, float actual)
     float raw_target_acc = (target - pd->last_target) / pd->dt;
 
     //低通滤波
+    // TODO
     float beta = 0.8f;
     float filtered_target_acc = beta * raw_target_acc + (1.0f - beta) * pd->last_target_acc;
     pd->last_target_acc = filtered_target_acc;
@@ -278,7 +280,7 @@ void PD_FF_Cal(PD_FF* pd, float target, float actual)
     //前馈+反馈控制
     float feedforward_acc = pd->Kff_acc * filtered_target_acc;
     float feedforward = pd->Kff * target;
-    float feedback = pd->Kp * pd->error + pd->Kd * derivative;
+    float feedback = pd->Kp * pd->error + pd->Kd * derivative; // 基础是pd控制器
 
     pd->output = feedforward + feedback + feedforward_acc;    //输出
 

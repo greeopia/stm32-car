@@ -12,7 +12,7 @@
 Task_t task[] = {
     {.flag = 0, /*.TimCount = 0,*/.LastTime = 0, .TimReload = 100, .pTaskFunc = motor_Task},
     {.flag = 0, /*.TimCount = 0,*/.LastTime = 0, .TimReload = 0, .pTaskFunc = IMU_Task},
-    {.flag = 0, /*.TimCount = 0,*/.LastTime = 0, .TimReload = 25, .pTaskFunc = IR_Task}, // 但是每10次结果平均输出
+    {.flag = 0, /*.TimCount = 0,*/.LastTime = 0, .TimReload = 20, .pTaskFunc = IR_Task}, // 但是每10次结果平均输出，算是一个简单的滤波器？
     {.flag = 0, /*.TimCount = 0,*/.LastTime = 0, .TimReload = 50, .pTaskFunc = BlueToothVofa_Task}
 }; // 顺序应该也代表简易仲裁优先级了
 

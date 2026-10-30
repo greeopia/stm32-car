@@ -59,15 +59,15 @@ void IR_init(void) {
 float bias;
 static float bias_ave;
 
-static uint8_t IR_Counts(uint8_t mask) {
-    uint8_t count = 0;
-    mask &= 0x7F;  // 七路红外，只统计低7位
-    while (mask != 0) {
-        mask &= mask - 1;
-        count++;
-    }
-    return count;
-}
+// static uint8_t IR_Counts(uint8_t mask) {
+//     uint8_t count = 0;
+//     mask &= 0x7F;  // 七路红外，只统计低7位
+//     while (mask != 0) {
+//         mask &= mask - 1;
+//         count++;
+//     }
+//     return count;
+// }
 
 static void IR_Mask_Update() {
 	static uint8_t IR_GPIO_NUM = sizeof(IR_GPIO)/sizeof(IR_GPIO[0]); int8_t temps = 0;
@@ -78,12 +78,12 @@ static void IR_Mask_Update() {
 		}
 		else IR_MASKS &= ~IR_GPIO[i].mask;
 	}
-	if (IR_Counts(IR_MASKS) == 0) IR_State = IR_State_LostLine;
+	if (__builtin_popcount(IR_MASKS) == 0) IR_State = IR_State_LostLine;
 	else if (IR_MASKS == 0b01111111) IR_State = IR_State_FullCheck;
 	
 	else {
 		IR_State = IR_State_Normal;
-		bias += 1.0f*temps/IR_Counts(IR_MASKS);
+		bias += 1.0f*temps/__builtin_popcount(IR_MASKS);
 	}
 }
 
@@ -106,7 +106,7 @@ void IR_Task(void) { // 我想应该用位置式pd控制器
 
 			break;
 		}
-		case IR_State_Normal: {
+		case IR_State_Normal: { // 这里也许可以改一下
 			CNT++;
 			if (CNT == 10) {
 				CNT = 0; 
@@ -114,10 +114,15 @@ void IR_Task(void) { // 我想应该用位置式pd控制器
 				bias = 0.0f;
 				Positional_PID_Cal(&IR_PID, 0, bias_ave);
 
-				LmotorTarget = base_speed - IR_PID.output;
+				LmotorTarget = base_speed - IR_PID.output; 
 				RmotorTarget = base_speed + IR_PID.output;
 			}
 			break;
 		}
+		/*
+		1.固定基础速度，别的控制环输出差速量
+		2.根据视觉的元素决定基础速度
+		3.根据某一个环的误差量决定基础速度（也许可以加一点滤波啥啥的）
+		*/
 	}
 }

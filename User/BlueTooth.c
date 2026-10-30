@@ -1,22 +1,55 @@
 #include "stm32f10x.h"                  // Device header
 #include "BlueTooth.h"
-#include "cJSON.h"
-#include "cJSON_Utils.h"
+#include "cJSON/cJSON.h"
+#include "cJSON/cJSON_Utils.h"
 #include "vofa.h"
 #include "string.h"
 #include "motor.h"
 
-static volatile uint8_t tx_busy = 0, rx_busy = 0;
-#define U1_TX_SIZE 128
-static uint8_t tx_buf[U1_TX_SIZE];
+/* 临时诊断：CH0/1显示每100ms原始脉冲数；改回0恢复两轮速度。 */
+#define VOFA_SHOW_RAW_PULSES 0
 
-Frame TxFrame = {
+static volatile uint8_t tx_busy = 0, rx_busy = 0;
+#define U1_FRAME_SIZE 128
+static uint8_t tx_buf[U1_FRAME_SIZE];
+
+TxFrame txFrame = {
     .fdata = {0.0f},
     .tail = {0x00, 0x00, 0x80, 0x7f}
 };
 
-uint8_t RxFrame[2][128];
-static uint8_t rx_cmar = 0; // 当前使用的DMA缓冲区索引，0或1
+// push和pop是针对要处理的数据的哦
+bool rxpush(struct RxFrame* self, const uint8_t data) {
+	if (self == NULL || self->tail >= U1_FRAME_SIZE) return false;
+	
+	uint8_t next = (self->tail + 1) % (2*U1_FRAME_SIZE);
+	if (next == self->head) return false;
+
+	self->fdata[self->CMAR ^ 1][self->tail] = data;
+	self->tail = next;
+	return true;
+}
+
+uint8_t rxpop(struct RxFrame* self) { // 返回移除的队首元素
+	if (self == NULL || self->head == self->tail) return false;
+
+	uint8_t out = self->fdata[self->CMAR ^ 1][self->head];
+	self->head = (self->head + 1) % (2*U1_FRAME_SIZE);
+
+	return out;
+}
+
+RxFrame rxFrame = {
+	.fdata = {0},
+	.head = 0, .tail = 0,
+	.CMAR = 0,
+	.pop = rxpop,
+	.push = rxpush
+};
+
+// uint8_t RxFrame[2][128];
+
+// static uint8_t rx_cmar = 0; // 当前使用的DMA缓冲区索引，0或1
 
 void BlueTooth_init() {
 	RCC_APB2PeriphClockCmd(RCC_APB2Periph_GPIOB | RCC_APB2Periph_AFIO | RCC_APB2Periph_USART1, ENABLE);
@@ -61,9 +94,9 @@ void BlueTooth_init() {
 
 	DMA_DeInit(DMA1_Channel5); // RX: USART_IDLE + DMA_HT/TC -> cJSON/指令 (这里没有连续转运嗷) (DMA循环模式)
 	DMA_InitStruct.DMA_PeripheralBaseAddr = (uint32_t)&USART1->DR;
-	DMA_InitStruct.DMA_MemoryBaseAddr = (uint32_t)RxFrame[rx_cmar]; // DMAy_Channelx->CMAR
+	DMA_InitStruct.DMA_MemoryBaseAddr = (uint32_t)rxFrame.fdata[rxFrame.CMAR]; // DMAy_Channelx->CMAR
 	DMA_InitStruct.DMA_DIR = DMA_DIR_PeripheralSRC;
-	DMA_InitStruct.DMA_BufferSize = sizeof(RxFrame[rx_cmar]); // DMAy_Channelx->CNDTR
+	DMA_InitStruct.DMA_BufferSize = sizeof(rxFrame.fdata); // DMAy_Channelx->CNDTR
 	DMA_InitStruct.DMA_PeripheralInc = DMA_PeripheralInc_Disable;
 	DMA_InitStruct.DMA_MemoryInc = DMA_MemoryInc_Enable;
 	DMA_InitStruct.DMA_PeripheralDataSize = DMA_PeripheralDataSize_Byte; // USART_WordLength_8b
@@ -95,7 +128,7 @@ void BlueTooth_init() {
 
 	NVIC_InitStruct.NVIC_IRQChannel = DMA1_Channel5_IRQn;
 	NVIC_InitStruct.NVIC_IRQChannelCmd = ENABLE;
-	NVIC_InitStruct.NVIC_IRQChannelPreemptionPriority = 2;
+	NVIC_InitStruct.NVIC_IRQChannelPreemptionPriority = 3;
 	NVIC_InitStruct.NVIC_IRQChannelSubPriority = 0;
 	NVIC_Init(&NVIC_InitStruct);	
 
@@ -124,6 +157,16 @@ void USART1_IRQHandler() {
 		uint16_t temp = USART1->SR;
 		temp = USART1->DR;
 		(void)temp;
+
+		static uint16_t last_pos = 0;
+		uint16_t pos = 2 * U1_FRAME_SIZE - DMA1_Channel5->CNDTR;
+		if (pos >= last_pos) {
+			rxFrame.tail += pos - last_pos;
+			last_pos = pos;
+		}
+		else {
+			rxFrame.tail += 2 * U1_FRAME_SIZE + (pos - last_pos);
+		}
     }
 }
 
@@ -138,7 +181,7 @@ void DMA1_Channel4_IRQHandler() {
 }
 
 static uint8_t DMA_Send(const void *data, uint16_t len) {
-    if (data == NULL || len == 0 || len > U1_TX_SIZE) return 0;
+    if (data == NULL || len == 0 || len > U1_FRAME_SIZE) return 0;
     if (tx_busy) return 0;
     /* 先置忙，再准备和启动发送 */
     tx_busy = 1;
@@ -170,8 +213,8 @@ void DMA1_Channel5_IRQHandler() {
 
 
 		DMA_Cmd(DMA1_Channel5, DISABLE);
-        DMA1_Channel5->CMAR = (uint32_t)RxFrame[rx_cmar ^ 1]; // 切换到另一个缓冲区
-        rx_cmar ^= 1; // 切换缓冲区索引
+        DMA1_Channel5->CMAR = (uint32_t)rxFrame.fdata[rxFrame.CMAR ^ 1]; // 切换到另一个缓冲区
+        rxFrame.CMAR ^= 1; // 切换缓冲区索引
 		DMA_Cmd(DMA1_Channel5, ENABLE);
     }
     if (DMA_GetITStatus(DMA1_IT_TC5) == SET) {
@@ -182,8 +225,8 @@ void DMA1_Channel5_IRQHandler() {
 
 
 		DMA_Cmd(DMA1_Channel5, DISABLE);
-        DMA1_Channel5->CMAR = (uint32_t)RxFrame[rx_cmar ^ 1]; // 切换到另一个缓冲区
-        rx_cmar ^= 1; // 切换缓冲区索引
+        DMA1_Channel5->CMAR = (uint32_t)rxFrame.fdata[rxFrame.CMAR ^ 1]; // 切换到另一个缓冲区
+        rxFrame.CMAR ^= 1; // 切换缓冲区索引
 		DMA_Cmd(DMA1_Channel5, ENABLE);
     }
 }
@@ -216,17 +259,26 @@ uint16_t GetRxBuf(const void* data, uint16_t size) {
 
 */
 
+extern float L_filter_speed, R_filter_speed;
+
 void BlueToothVofa_Task() {
 	float target = GetTarget();
-    TxFrame.fdata[0] = speedl;
-    TxFrame.fdata[1] = speedr; // 实际速度
-    // TxFrame.fdata[2] = LmotorTarget; 
-    // TxFrame.fdata[3] = RmotorTarget; 
-	TxFrame.fdata[2] = target; // 左轮正转目标，0~3m/s
-    TxFrame.fdata[3] = target; // 右轮使用同一次ADC读数
+#if VOFA_SHOW_RAW_PULSES
+    txFrame.fdata[0] = pulse_l_100ms;
+    txFrame.fdata[1] = pulse_r_100ms;
+#else
+    txFrame.fdata[0] = speedl;
+    txFrame.fdata[1] = speedr; // 实际速度
+#endif
+	txFrame.fdata[2] = L_filter_speed;
+	txFrame.fdata[3] = R_filter_speed;
+    txFrame.fdata[4] = LmotorTarget; 
+    txFrame.fdata[5] = RmotorTarget; 
+	// txFrame.fdata[2] = target; // 左轮正转目标，0~3m/s
+    // txFrame.fdata[3] = target; // 右轮使用同一次ADC读数
 
-    TxFrame.fdata[4] = GetDutyl(); // 左轮占空比，0~1
-    TxFrame.fdata[5] = GetDutyr(); // 右轮占空比，0~1
+    txFrame.fdata[6] = GetDutyl(); // 左轮占空比，0~1
+    txFrame.fdata[7] = GetDutyr(); // 右轮占空比，0~1
 
-    DMA_Send(&TxFrame, sizeof(TxFrame));
+    DMA_Send(&txFrame, sizeof(txFrame));
 }

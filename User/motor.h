@@ -14,6 +14,7 @@ float GetMotorCountl(void);
 float GetMotorCountr(void);
 
 extern float speedl, speedr; // 正转速度，m/s
+// extern volatile uint16_t pulse_l_100ms, pulse_r_100ms; // 每100ms的原始脉冲增量，用于VOFA诊断
 extern volatile float LmotorTarget, RmotorTarget; // 正转速度目标，m/s
 
 
