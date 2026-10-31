@@ -1,9 +1,7 @@
 #pragma once
 
-#ifndef  __CONTROL_PID_H
-#define  __CONTROL_PID_H
+#include "stm32f10x.h"
 
-// __CONTROL_PID_H
 //普通PID结构体
 typedef struct
 {
@@ -38,8 +36,8 @@ typedef struct
 } PD_FF;
 
 
-//保证编译pid.h的时，优先编译PID结构体定义，避免编译器未识别到PID结构体后去编译其他用了PID结构体的地方，导致报错
-#include "stm32f10x.h"
+// //保证编译pid.h的时，优先编译PID结构体定义，避免编译器未识别到PID结构体后去编译其他用了PID结构体的地方，导致报错
+// #include "stm32f10x.h"
 
 //普通PID控制
 void Incremental_PID_Init(PID *pid, float p, float i, float d, float minOutput, float maxOutput);
@@ -70,8 +68,8 @@ extern PID Angle_PID;  //角速度环(转向环)
 extern PID IR_PID;     //巡线环
 // extern PD_FF Angle_PID_F;  //角速度环
 // extern PID Temp_PID;   //临时角度环（偏航角,避障、进圆环用）
+extern PID speed_decision;
 
 // extern PID servo_pid, makeup_pid;
 
-#endif
 

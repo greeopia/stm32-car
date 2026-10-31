@@ -3,11 +3,13 @@
 
 //定义结构体
 // PID servo_pid;
- PID Lmotor_PID; //左电机PID
+ PID Lmotor_PID; //左电机PID -> m/s
  PID Rmotor_PID; //右电机PID
 // extern PID Photo_PID;  //图像环
  PID Angle_PID;  //角速度环(转向环)
  PID IR_PID;     //巡线环
+
+ PID speed_decision; // targetspeed && base_now ->m/s2
 
 // //定义类
 // extern Motor motor;
@@ -79,7 +81,7 @@ void Incremental_PID_Cal(PID *pid, float set_value,float get_value)
  *
  * ************************************************************************
  */
-void Positional_PID_Init (PID *pid, float p, float i, float d, float maxI,float minOutput, float maxOutput)
+void Positional_PID_Init(PID *pid, float p, float i, float d, float maxI,float minOutput, float maxOutput)
 {
     pid->kp = p;
     pid->ki = i;
@@ -115,8 +117,8 @@ void Positional_PID_Cal(PID *pid,float set_value, float get_value) {
     //积分限幅
     if (pid->integral > pid->maxIntegral)
         pid->integral = pid->maxIntegral;
-    // else if (pid->integral < pid->maxIntegral)
-    //     pid->integral = pid->maxIntegral;
+    else if (pid->integral < -pid->maxIntegral)
+        pid->integral = -pid->maxIntegral;
     //计算输出
     pid->output = pout + dout + pid->integral;
     //输出限幅
@@ -179,7 +181,7 @@ void PID_Rmotor(PID* pid, float target)
     // speedr = filter_speed;
 
     //解算PID获得电机输出
-    Incremental_PID_Cal(pid,target,speedr);
+    Incremental_PID_Cal(pid,target,R_filter_speed);
 }
 
 // //PID智能车平滑起步，防止电机猛转
@@ -232,7 +234,7 @@ void PD_FF_Init(PD_FF* pd, float kp, float kd, float kff, float kff_acc, float m
     pd->Kff = kff;
     pd->Kff_acc = kff_acc;
 
-    pd->dt = ms/1000;  //输入毫秒
+    pd->dt = ms / 1000.0f;  // 入参单位 ms，内部统一换算为 s
 
     pd->maxOutput = max;
 
@@ -249,30 +251,37 @@ void PD_FF_Reset(PD_FF* pd)
     pd->last_target_acc = 0.0f;
     pd->output = 0.0f;
 }
-
-//PD+前馈 控制计算
+/**
+ * ************************************************************************
+ * @brief PD+前馈 控制计算
+ *
+ * @param[in] pd  pd结构体
+ * @param[in] target  目标值（与被控量同单位）
+ * @param[in] actual  反馈值
+ * @note 前馈由 target 及其变化率直接计算，是开环补偿；Kd 作用于误差微分，二者不要混淆
+ * @attention 这里是带时间的标准pid计算
+ * ************************************************************************
+ */
 void PD_FF_Cal(PD_FF* pd, float target, float actual)
 {
-    //防止采样周期过小
+    //防止 dt 为 0 导致除零
     if (pd->dt <= 0.0f) pd->dt = 0.001f;
 
     //误差
     pd->error = target - actual; // 目标值 - 实际值
 
-    //微分
-    float derivative = (pd->error - pd->last_error) / pd->dt; // 形式看来更标准了
+    //误差微分；target 突变时会产生微分冲击
+    float derivative = (pd->error - pd->last_error) / pd->dt;
 
-    //低通滤波
-    // TODO
+    //一阶低通：抑制差分放大的高频噪声；alpha 越大滤波越弱、相位滞后越小
     float alpha = 0.8f;
     derivative = alpha * derivative + (1.0f-alpha) * pd->last_derivative;
     pd->last_derivative = derivative;
 
-    //目标变化率
+    //目标变化率（target 为角速度时，这里就是角加速度）
     float raw_target_acc = (target - pd->last_target) / pd->dt;
 
-    //低通滤波
-    // TODO
+    //一阶低通：避免目标跳变时前馈项产生尖峰；beta 越大滤波越弱
     float beta = 0.8f;
     float filtered_target_acc = beta * raw_target_acc + (1.0f - beta) * pd->last_target_acc;
     pd->last_target_acc = filtered_target_acc;

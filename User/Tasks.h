@@ -19,7 +19,7 @@ typedef struct {
 	void (*pTaskFunc)();
 } Task_t;
 
-extern Task_t task[4];
+extern Task_t task[5];
 
 void Task_Init(Task_t task[], uint8_t tasksnum);
 // void Tasks_Tick(void);

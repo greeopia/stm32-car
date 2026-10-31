@@ -3,8 +3,7 @@ name: project
 type: ARM
 deviceName: null
 packDir: .pack/Keil/STM32F1xx_DFP.2.3.0
-srcDirs:
-  - cJSON
+srcDirs: []
 virtualFolder:
   name: <virtual_root>
   files:
@@ -39,6 +38,10 @@ virtualFolder:
     - path: User/vofa.h
     - path: kalman_filter/kalman_filter.c
     - path: kalman_filter/kalman_filter.h
+    - path: cJSON/cJSON.h
+    - path: cJSON/cJSON_Utils.h
+    - path: cJSON/cJSON.c
+    - path: cJSON/cJSON_Utils.c
   folders:
     - name: Start
       files:
@@ -122,10 +125,6 @@ virtualFolder:
         - path: User/IR.h
         - path: User/vofa.c
         - path: User/vofa.h
-        - path: User/cJSON.c
-        - path: User/cJSON.h
-        - path: User/cJSON_Utils.c
-        - path: User/cJSON_Utils.h
         - path: User/OLED.c
         - path: User/OLED.h
         - path: User/OLED_Font.h
@@ -155,8 +154,8 @@ targets:
         - RTE/_Target_1
       libList: []
     excludeList:
-      - <virtual_root>/cJSON_Utils.c
-      - <virtual_root>/cJSON.c
+      - <virtual_root>/User/cJSON_Utils.c
+      - <virtual_root>/User/cJSON.c
     settings:
       debugger: cortex-debug
     toolchain: AC5
@@ -168,8 +167,7 @@ targets:
         options:
           version: 4
           afterBuildTasks: []
-          asm-compiler:
-            defines: []
+          asm-compiler: {}
           beforeBuildTasks: []
           c/cpp-compiler:
             CXX_FLAGS: --no-multibyte-chars
@@ -177,8 +175,7 @@ targets:
             c99-mode: true
             gnu-extensions: true
             one-elf-section-per-function: true
-            optimization: level-3
-            optimize-for-time: true
+            optimization: level-2
             warnings: all-warnings
           global:
             output-debug-info: enable
@@ -189,7 +186,6 @@ targets:
             output-format: elf
             ro-base: "0x08000000"
             rw-base: "0x20000000"
-            xo-base: ""
         scatterFilePath: ""
         storageLayout:
           RAM:
@@ -319,7 +315,7 @@ targets:
         optionBytes: .eide/target_1.st.option.bytes.ini
         otherCmds: ""
         proType: SWD
-        resetMode: default
+        resetMode: SWrst
         runAfterProgram: true
         speed: 4000
     uploader: STLink

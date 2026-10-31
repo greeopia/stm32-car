@@ -9,6 +9,7 @@
 #include "IR.h"
 #include "vofa.h"
 #include "PID.h"
+#include "SpeedDecision.h"
 // #include "IMU.h"
 
 // emm 速度环是带滤波的增量式pi, 循迹是带速度前馈的位置式pd
@@ -24,6 +25,7 @@ int main(){
 	Target_AD_Init();
 
 	IR_init();
+	soft_speeddecision_init(&speed_decision);
 	// vofa_init();
 	// IMU_init();
 	BlueTooth_init();

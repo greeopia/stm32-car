@@ -4,6 +4,8 @@
 #include "SysTick.h"
 #include "filter.h"
 
+#define MOTER_HAVE_ENCODERS 0
+
 static void motor_arg_init(void);
 
 void motor_init(void) {
@@ -83,6 +85,14 @@ void SetDutyr(float duty) {
 	TIM1->CCR1 = (uint16_t)(duty * (TIM1->ARR+1));
 }
 
+#if MOTER_HAVE_ENCODERS
+
+void Encoder_init(void) {
+
+}
+
+#else
+
 void Encoder_init(void) {
 	RCC_APB2PeriphClockCmd(RCC_APB2Periph_GPIOA, ENABLE);
 	RCC_APB1PeriphClockCmd(RCC_APB1Periph_TIM2 | RCC_APB1Periph_TIM3, ENABLE);
@@ -133,24 +143,24 @@ float GetMotorCountr(void) {
 	return Countr;
 }
 
+#endif
+
 float speedl = 0.0f, speedr = 0.0f; // 正转速度，m/s
 // volatile uint16_t pulse_l_100ms = 0, pulse_r_100ms = 0;
 volatile float LmotorTarget, RmotorTarget; // 正转速度目标，m/s
 extern float base_speed;
 
-#define VOFA_SHOW_RAW_PULSES 0
-
 void motor_Task(void) { // PI: 正转速度 -> 0~1占空比
 	static float LastCountl = 0, LastCountr = 0;
-	static uint16_t LastPulseL = 0, LastPulseR = 0;
 	static uint32_t LastTick = 0;
+
+#if MOTER_HAVE_ENCODERS
+
+
+
+#else
+
 	float Countl = GetMotorCountl(), Countr = GetMotorCountr();
-#if VOFA_SHOW_RAW_PULSES
-	uint16_t PulseL = TIM3->CNT, PulseR = TIM2->CNT;
-	pulse_l_100ms = (uint16_t)(PulseL - LastPulseL);
-	pulse_r_100ms = (uint16_t)(PulseR - LastPulseR);
-	LastPulseL = PulseL; LastPulseR = PulseR;
-#endif
 	if (LastCountl > Countl || LastCountr > Countr) { // 计数器溢出
 		LastCountl = Countl;
 		LastCountr = Countr;
@@ -162,6 +172,8 @@ void motor_Task(void) { // PI: 正转速度 -> 0~1占空比
 	speedr = (Countr - LastCountr) / (NowTick - LastTick) * 1000.0f;
 	LastTick = NowTick; LastCountl = Countl; LastCountr = Countr;
 
+#endif
+
 	// float target = GetTarget(); // 0~3
 	// 滤波还是分离出来吧 speedx -> x_filter_speed
 
@@ -170,9 +182,6 @@ void motor_Task(void) { // PI: 正转速度 -> 0~1占空比
 
 	PID_Lmotor(&Lmotor_PID, LmotorTarget);
 	PID_Rmotor(&Rmotor_PID, RmotorTarget);
-
-	// PID_Lmotor(LmotorTarget);
-	// PID_Rmotor(RmotorTarget);
 
 	SetDutyl(Lmotor_PID.output);
 	SetDutyr(Rmotor_PID.output);

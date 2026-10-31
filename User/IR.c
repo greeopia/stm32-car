@@ -2,6 +2,7 @@
 #include "stm32f10x.h"                  // Device header
 #include "PID.h"
 #include "motor.h"
+#include <SpeedDecision.h>
 #include "SysTick.h"
 
 static uint8_t IR_MASKS = 0x00; // 低位对应左边传感器，高位对应右边传感器 0b00000000
@@ -56,8 +57,8 @@ void IR_init(void) {
 } // 正对着车子从左到右: PA4 PA5 PB0 PB5 PB1 PB10 PB11
 // 黑线输出高电平
 
-float bias;
-static float bias_ave;
+static float bias;
+float bias_ave;
 
 // static uint8_t IR_Counts(uint8_t mask) {
 //     uint8_t count = 0;
@@ -87,30 +88,44 @@ static void IR_Mask_Update() {
 	}
 }
 
-const float base_speed = 0.8f;
+float base_speed = 0.0f, base_speed_max = 0.8f;
 // 3s电池速度最高大概1.25m/s
+
+static uint32_t check = 0;
+static uint8_t check_first = 1;
 void IR_Task(void) { // 我想应该用位置式pd控制器
 	volatile static uint8_t CNT = 0;
 
 	IR_Mask_Update();
 	switch (IR_State) {
 		case IR_State_LostLine: {
-			// __disable_irq();
-			// SetDutyl(0.0f); SetDutyr(0.0f);
-			// while(1);
+			bias = 0; CNT = 0;
+
+			if (check_first) {
+				check = GetTick();
+				check_first = 0;
+			}
+			if (GetTick() - check >= 2000) {
+				__disable_irq();
+				SetDutyl(0.0f); SetDutyr(0.0f);
+				while(1);
+			}
 			break;
 		}
 		case IR_State_FullCheck: {
-			bias = 0.0f;
+			bias = 0.0f; 
+			CNT = 0;
 			LmotorTarget = base_speed; RmotorTarget = base_speed;
 
 			break;
 		}
-		case IR_State_Normal: { // 这里也许可以改一下
+		case IR_State_Normal: { // 这里也许可以改一下，改成用前馈
+			check_first = 1;
 			CNT++;
-			if (CNT == 10) {
+			if (CNT == 3) {
 				CNT = 0; 
-				bias_ave = bias/10.0f;
+				
+				bias_ave = bias/3.0f;
 				bias = 0.0f;
 				Positional_PID_Cal(&IR_PID, 0, bias_ave);
 
