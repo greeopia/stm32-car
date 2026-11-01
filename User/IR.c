@@ -57,8 +57,7 @@ void IR_init(void) {
 } // 正对着车子从左到右: PA4 PA5 PB0 PB5 PB1 PB10 PB11
 // 黑线输出高电平
 
-static float bias;
-float bias_ave;
+float bias; // 滤波后的线偏移，供 IR_PID 和 SpeedDecision 读取
 
 // static uint8_t IR_Counts(uint8_t mask) {
 //     uint8_t count = 0;
@@ -83,8 +82,9 @@ static void IR_Mask_Update() {
 	else if (IR_MASKS == 0b01111111) IR_State = IR_State_FullCheck;
 	
 	else {
+		float raw = 1.0f*temps/__builtin_popcount(IR_MASKS);
 		IR_State = IR_State_Normal;
-		bias += 1.0f*temps/__builtin_popcount(IR_MASKS);
+		bias += 0.5f*(raw - bias); // 一阶低通，代替原来的3点平均
 	}
 }
 
@@ -94,12 +94,10 @@ float base_speed = 0.0f, base_speed_max = 0.8f;
 static uint32_t check = 0;
 static uint8_t check_first = 1;
 void IR_Task(void) { // 我想应该用位置式pd控制器
-	volatile static uint8_t CNT = 0;
-
 	IR_Mask_Update();
 	switch (IR_State) {
 		case IR_State_LostLine: {
-			bias = 0; CNT = 0;
+			bias = 0;
 
 			if (check_first) {
 				check = GetTick();
@@ -114,24 +112,17 @@ void IR_Task(void) { // 我想应该用位置式pd控制器
 		}
 		case IR_State_FullCheck: {
 			bias = 0.0f; 
-			CNT = 0;
 			LmotorTarget = base_speed; RmotorTarget = base_speed;
 
 			break;
 		}
 		case IR_State_Normal: { // 这里也许可以改一下，改成用前馈
 			check_first = 1;
-			CNT++;
-			if (CNT == 3) {
-				CNT = 0; 
-				
-				bias_ave = bias/3.0f;
-				bias = 0.0f;
-				Positional_PID_Cal(&IR_PID, 0, bias_ave);
 
-				LmotorTarget = base_speed - IR_PID.output; 
-				RmotorTarget = base_speed + IR_PID.output;
-			}
+			Positional_PID_Cal(&IR_PID, 0, bias);
+
+			LmotorTarget = base_speed - IR_PID.output; 
+			RmotorTarget = base_speed + IR_PID.output;
 			break;
 		}
 		/*

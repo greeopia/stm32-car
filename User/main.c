@@ -37,15 +37,9 @@ int main(){
 	OLED_ShowString(1, 7, "turn");
 	// while(GPIO_ReadInputDataBit(GPIOA, GPIO_Pin_7) == Bit_SET){
 	while(1){
-		// IMU_Task();
-		Tasks_Run();
-		// OLED_ShowNum(2, 1, (uint32_t)(Lmotor_PID.kp*100), 4);
-		// OLED_ShowNum(3, 1, (uint32_t)(Lmotor_PID.ki*100), 4);
-		// OLED_ShowNum(4, 1, (uint32_t)(Lmotor_PID.kd*100), 4);
-
-		// OLED_ShowNum(2, 7, (uint32_t)(IR_PID.kp*100), 4);
-		// OLED_ShowNum(3, 7, (uint32_t)(IR_PID.ki*100), 4);
-		// OLED_ShowNum(4, 7, (uint32_t)(IR_PID.kd*100), 4);
+		// Tasks_Run();
+		SetDutyl(0.5f);
+		SetDutyr(0.5f);			
 	}
 	SetDutyl(0.0f);
 	SetDutyr(0.0f);	

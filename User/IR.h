@@ -29,4 +29,4 @@ void IR_init(void);
 
 void IR_Task(void);
 
-extern float bias_ave, base_speed, base_speed_max;
+extern float bias, base_speed, base_speed_max;

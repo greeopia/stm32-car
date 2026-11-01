@@ -37,7 +37,7 @@ void Decision_Task() {
     float dt = (uint32_t)(now - LastTime) * 0.001f;
     if (dt > 0.1f) dt = 0.1f;
 
-    float target = base_speed_max - SPEED_K_SLOW * fabsf(bias_ave);
+    float target = base_speed_max - SPEED_K_SLOW * fabsf(bias);
     if (target < SPEED_MIN) target = SPEED_MIN;
 
     Positional_PID_Cal(&speed_decision, target, base_speed);   // output = m/s²

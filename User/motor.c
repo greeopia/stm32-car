@@ -4,7 +4,6 @@
 #include "SysTick.h"
 #include "filter.h"
 
-#define MOTER_HAVE_ENCODERS 0
 
 static void motor_arg_init(void);
 
@@ -51,8 +50,8 @@ void motor_init(void) {
 	GPIO_InitStruct.GPIO_Speed = GPIO_Speed_50MHz;
 	GPIO_Init(GPIOB, & GPIO_InitStruct);
 
-	GPIO_ResetBits(GPIOB, GPIO_Pin_12 | GPIO_Pin_14); // IN1、IN3低电平
-	GPIO_SetBits(GPIOB, GPIO_Pin_13 | GPIO_Pin_15); // IN2、IN4高电平
+	GPIO_SetBits(GPIOB, GPIO_Pin_12 | GPIO_Pin_14); // IN1、IN3高电平
+	GPIO_ResetBits(GPIOB, GPIO_Pin_13 | GPIO_Pin_15); // IN2、IN4低电平
 
 	motor_arg_init();
 }
@@ -74,21 +73,107 @@ float GetDutyr(void) {
 }
 
 void SetDutyl(float duty) {
-	if (duty < 0.0f) duty = 0.0f;
-	if (duty > 1.0f) duty = 1.0f;
-	TIM1->CCR2 = (uint16_t)(duty * (TIM1->ARR+1));
+	if (duty < 0.0f) {
+		GPIO_WriteBit(GPIOB, GPIO_Pin_14, Bit_RESET);
+		GPIO_WriteBit(GPIOB, GPIO_Pin_15, Bit_SET);
+		if (duty < -1.0f) duty = -1.0f;
+	}
+	else {
+		GPIO_WriteBit(GPIOB, GPIO_Pin_14, Bit_SET);
+		GPIO_WriteBit(GPIOB, GPIO_Pin_15, Bit_RESET);
+		if (duty > 1.0f) duty = 1.0f;
+	}
+	TIM1->CCR2 = (uint16_t)(fabs(duty) * (TIM1->ARR+1));
 }
 
-void SetDutyr(float duty) {
-	if (duty < 0.0f) duty = 0.0f;
-	if (duty > 1.0f) duty = 1.0f;
-	TIM1->CCR1 = (uint16_t)(duty * (TIM1->ARR+1));
+void SetDutyr(float duty) { // PB12 PB13
+	if (duty < 0.0f) {
+		GPIO_WriteBit(GPIOB, GPIO_Pin_12, Bit_RESET);
+		GPIO_WriteBit(GPIOB, GPIO_Pin_13, Bit_SET);
+		if (duty < -1.0f) duty = -1.0f;
+	}
+	if (duty > 1.0f) {
+		GPIO_WriteBit(GPIOB, GPIO_Pin_12, Bit_SET);
+		GPIO_WriteBit(GPIOB, GPIO_Pin_13, Bit_RESET);		
+		duty = 1.0f;
+	}
+	TIM1->CCR1 = (uint16_t)(fabs(duty) * (TIM1->ARR+1));
 }
 
 #if MOTER_HAVE_ENCODERS
 
-void Encoder_init(void) {
+void Encoder_init(void) { // PA0 PA1 PA6 PA7
+	RCC_APB2PeriphClockCmd(RCC_APB2Periph_GPIOA, ENABLE);
+	RCC_APB1PeriphClockCmd(RCC_APB1Periph_TIM2 | RCC_APB1Periph_TIM3, ENABLE);
 
+	GPIO_InitTypeDef GPIO_InitStruct;
+	GPIO_InitStruct.GPIO_Mode = GPIO_Mode_IN_FLOATING;
+	GPIO_InitStruct.GPIO_Pin = GPIO_Pin_0 | GPIO_Pin_6 | GPIO_Pin_1 | GPIO_Pin_7;
+	GPIO_InitStruct.GPIO_Speed = GPIO_Speed_50MHz;
+	GPIO_Init(GPIOA, &GPIO_InitStruct);
+
+	TIM_TimeBaseInitTypeDef TIM_TimeBaseInitStruct;
+	TIM_TimeBaseInitStruct.TIM_ClockDivision = TIM_CKD_DIV1;
+	TIM_TimeBaseInitStruct.TIM_CounterMode = TIM_CounterMode_Up;
+	TIM_TimeBaseInitStruct.TIM_Period = 65536 - 1;
+	TIM_TimeBaseInitStruct.TIM_Prescaler = 1-1;
+	TIM_TimeBaseInitStruct.TIM_RepetitionCounter = 0;
+	TIM_TimeBaseInit(TIM2, &TIM_TimeBaseInitStruct);
+	TIM_TimeBaseInit(TIM3, &TIM_TimeBaseInitStruct);	
+
+	TIM_ICInitTypeDef TIM_ICInitStructure;							//定义结构体变量
+	TIM_ICStructInit(&TIM_ICInitStructure);                         //结构体初始化，若结构体没有完整赋值
+	
+	TIM_ICInitStructure.TIM_Channel = TIM_Channel_1;
+	TIM_ICInitStructure.TIM_ICFilter = 0xF;
+	TIM_ICInit(TIM2, &TIM_ICInitStructure); 
+	TIM_ICInit(TIM3, &TIM_ICInitStructure); 
+
+	TIM_ICInitStructure.TIM_Channel = TIM_Channel_2;
+	TIM_ICInitStructure.TIM_ICFilter = 0xF;
+	TIM_ICInit(TIM2, &TIM_ICInitStructure); 
+	TIM_ICInit(TIM3, &TIM_ICInitStructure); 	
+
+	TIM_EncoderInterfaceConfig(TIM2, TIM_EncoderMode_TI12, TIM_ICPolarity_Rising, TIM_ICPolarity_Rising);
+	TIM_EncoderInterfaceConfig(TIM3, TIM_EncoderMode_TI12, TIM_ICPolarity_Rising, TIM_ICPolarity_Falling);
+
+	TIM2->CNT = 0; TIM3->CNT = 0;
+
+	TIM_Cmd(TIM2, ENABLE);
+	TIM_Cmd(TIM3, ENABLE);	
+}
+
+static const float WHEEL_RADIUS = 0.0325f; // m
+static const int16_t ENCODER_PULSE = (13*90*4);
+
+#ifndef PI
+#define PI          3.14159265f
+#endif
+
+float GetMotorSpeedl(uint32_t T) {
+	static uint16_t LastCountl  = 0;
+	uint16_t Countl = TIM3->CNT;
+
+	int16_t temp = (int16_t)(Countl - LastCountl);
+	LastCountl = Countl;
+
+	if (T == 0) return 0;
+	float s = (2.0f*PI*WHEEL_RADIUS)/(ENCODER_PULSE);
+	float T_s = T*0.001f;
+	return temp*s/T_s;
+}
+
+float GetMotorSpeedr(uint32_t T) {
+	static uint16_t LastCountr  = 0;
+	uint16_t Countr = TIM2->CNT;
+
+	int16_t temp = (int16_t)(Countr - LastCountr);
+	LastCountr = Countr;
+
+	if (T == 0) return 0;
+	float s = (2.0f*PI*WHEEL_RADIUS)/(ENCODER_PULSE);
+	float T_s = T*0.001f;
+	return temp*s/T_s;
 }
 
 #else
@@ -151,12 +236,16 @@ volatile float LmotorTarget, RmotorTarget; // 正转速度目标，m/s
 extern float base_speed;
 
 void motor_Task(void) { // PI: 正转速度 -> 0~1占空比
-	static float LastCountl = 0, LastCountr = 0;
+	// static float LastCountl = 0, LastCountr = 0;
 	static uint32_t LastTick = 0;
 
 #if MOTER_HAVE_ENCODERS
 
-
+	uint32_t NowTick = GetTick();
+// 为了搞到 speedl speedr
+	speedl = GetMotorSpeedl(NowTick - LastTick);
+	speedr = GetMotorSpeedr(NowTick - LastTick);
+	LastTick = NowTick;
 
 #else
 
@@ -189,7 +278,7 @@ void motor_Task(void) { // PI: 正转速度 -> 0~1占空比
 
 volatile uint16_t AD_Value; // DMA传输的ADC值
 
-void Target_AD_Init(void) { // PA1
+void Target_AD_Init(void) { // PA3
 	RCC_APB2PeriphClockCmd(RCC_APB2Periph_ADC1 | RCC_APB2Periph_GPIOA, ENABLE);
 	RCC_AHBPeriphClockCmd(RCC_AHBPeriph_DMA1, ENABLE);
 
@@ -198,21 +287,22 @@ void Target_AD_Init(void) { // PA1
 
 	GPIO_InitTypeDef GPIO_InitStruct;
 	GPIO_InitStruct.GPIO_Mode = GPIO_Mode_AIN;
-	GPIO_InitStruct.GPIO_Pin = GPIO_Pin_1;
+	GPIO_InitStruct.GPIO_Pin = GPIO_Pin_3;
 	GPIO_InitStruct.GPIO_Speed = GPIO_Speed_50MHz;
 	GPIO_Init(GPIOA, &GPIO_InitStruct);
 
 	/*ADC初始化*/
 	ADC_InitTypeDef ADC_InitStructure;						//定义结构体变量
-	ADC_InitStructure.ADC_Mode = ADC_Mode_Independent;      //模式，选择独立模式，即单独使用ADC2
+	ADC_InitStructure.ADC_Mode = ADC_Mode_Independent;      //模式，选择独立模式，即单独使用ADC1
 	ADC_InitStructure.ADC_DataAlign = ADC_DataAlign_Right;  //数据对齐，选择右对齐
 	ADC_InitStructure.ADC_ExternalTrigConv = ADC_ExternalTrigConv_None;	//外部触发，使用软件触发，不需要外部触发gConv_None;
-	ADC_InitStructure.ADC_ContinuousConvMode = ENABLE;     //连续转换，失能，每转换一次规则组序列后停止
+	ADC_InitStructure.ADC_ContinuousConvMode = ENABLE;     //连续转换，使能，配合DMA循环模式持续刷新AD_Value
 	ADC_InitStructure.ADC_ScanConvMode = DISABLE;           //扫描模式，失能，只转换规则组的序列1这一个位置
 	ADC_InitStructure.ADC_NbrOfChannel = 1;                 //通道数，为1，仅在扫描模式下，才需要指定大于1的数，在非扫描模式下，只能是1
 	ADC_Init(ADC1, &ADC_InitStructure);                     //将结构体变量交给ADC_Init，配置ADC1
 
-	ADC_RegularChannelConfig(ADC1, ADC_Channel_1, 1, ADC_SampleTime_7Cycles5);
+	/*电位器源阻抗较高，用7.5周期采样会有增益误差，取55.5周期*/
+	ADC_RegularChannelConfig(ADC1, ADC_Channel_3, 1, ADC_SampleTime_55Cycles5);
 
 	/*DMA初始化*/
 	DMA_InitTypeDef DMA_InitStructure;											//定义结构体变量
@@ -221,16 +311,17 @@ void Target_AD_Init(void) { // PA1
 	DMA_InitStructure.DMA_PeripheralInc = DMA_PeripheralInc_Disable;			//外设地址自增，选择失能，始终以ADC数据寄存器为源
 	DMA_InitStructure.DMA_MemoryBaseAddr = (uint32_t)&AD_Value;					//存储器基地址，给定存放AD转换结果的全局数组AD_Value
 	DMA_InitStructure.DMA_MemoryDataSize = DMA_MemoryDataSize_HalfWord;			//存储器数据宽度，选择半字，与源数据宽度对应
-	DMA_InitStructure.DMA_MemoryInc = DMA_MemoryInc_Enable;						//存储器地址自增，选择使能，每次转运后，数组移到下一个位置
+	DMA_InitStructure.DMA_MemoryInc = DMA_MemoryInc_Disable;					//存储器地址自增，只有单个变量，选择失能
 	DMA_InitStructure.DMA_DIR = DMA_DIR_PeripheralSRC;							//数据传输方向，选择由外设到存储器，ADC数据寄存器转到数组
 	DMA_InitStructure.DMA_BufferSize = 1;										//转运的数据大小（转运次数），与ADC通道数一致
 	DMA_InitStructure.DMA_Mode = DMA_Mode_Circular;								//模式，选择循环模式，与ADC的连续转换一致
 	DMA_InitStructure.DMA_M2M = DMA_M2M_Disable;								//存储器到存储器，选择失能，数据由ADC外设触发转运到存储器
-	DMA_InitStructure.DMA_Priority = DMA_Priority_High;						//优先级，选择中等
-	DMA_Init(DMA1_Channel1, &DMA_InitStructure);								//将结构体变量交给DMA_Init，配置DMA1的通道1
+	DMA_InitStructure.DMA_Priority = DMA_Priority_High;						//优先级，选择高
+	DMA_DeInit(DMA1_Channel1);													//复位通道，避免残留配置
+	DMA_Init(DMA1_Channel1, &DMA_InitStructure);								//ADC1的DMA请求固定映射到DMA1通道1
 
 	/*DMA和ADC使能*/
-	DMA_Cmd(DMA1_Channel1, ENABLE);							//DMA1的通道1使能
+	DMA_Cmd(DMA1_Channel1, ENABLE);							//DMA1的通道1使能，配合循环模式持续转运ADC结果
 	ADC_DMACmd(ADC1, ENABLE);								//ADC1触发DMA1的信号使能
 	ADC_Cmd(ADC1, ENABLE);									//ADC1使能
 
@@ -244,8 +335,8 @@ void Target_AD_Init(void) { // PA1
 	ADC_SoftwareStartConvCmd(ADC1, ENABLE);	//软件触发ADC开始工作，由于ADC处于连续转换模式，故触发一次后ADC就可以一直连续不断地工作
 }
 
-float GetTarget(void) { // 正转目标速度：电位器全量程对应0~3m/s。
-	float temp_target = 1.0f*AD_Value / 4095.0f * 3.0f;
-	if (temp_target < 0.1f) temp_target = 0.0f;
+float GetTarget(void) { // 目标速度：电位器全量程对应-3~3m/s。
+	float temp_target = 1.0f*AD_Value / 4095.0f * 6.0f - 3.0f;
+	if (temp_target < 0.1f && temp_target > -0.1f) temp_target = 0.0f;
 	return temp_target;
 }
