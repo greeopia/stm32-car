@@ -49,8 +49,8 @@ void Positional_PID_Cal(PID *pid,float set_value, float get_value);
 void PID_Reset(PID *pid);   //清除PID环的任何时刻误差、积分、输出
 
 /* 电机仅正转：target单位m/s，非正目标停止输出，正目标上限见motor.h。 */
-void PID_Lmotor(PID* pid, float target);
-void PID_Rmotor(PID* pid, float target);
+void PID_motor(PID* pid, float target, float actual);
+
 // void PID_CarStart(float target, float now_value, int step, PID *left_speed, PID *right_speed);
 
 //PD+前馈 控制

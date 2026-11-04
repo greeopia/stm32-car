@@ -37,9 +37,9 @@ int main(){
 	OLED_ShowString(1, 7, "turn");
 	// while(GPIO_ReadInputDataBit(GPIOA, GPIO_Pin_7) == Bit_SET){
 	while(1){
-		// Tasks_Run();
-		SetDutyl(0.5f);
-		SetDutyr(0.5f);			
+		Tasks_Run();
+		// SetDutyl(0.16f); // 认为下限是0.16
+		// SetDutyr(0.16f);			
 	}
 	SetDutyl(0.0f);
 	SetDutyr(0.0f);	

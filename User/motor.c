@@ -3,6 +3,7 @@
 #include "motor.h"
 #include "SysTick.h"
 #include "filter.h"
+#include <math.h>
 
 
 static void motor_arg_init(void);
@@ -37,6 +38,9 @@ void motor_init(void) {
 	TIM_OC1Init(TIM1, &TIM_OCInitStruct);
 	TIM_OC2Init(TIM1, &TIM_OCInitStruct);
 
+	TIM_OC1PreloadConfig(TIM1, TIM_OCPreload_Enable);
+	TIM_OC2PreloadConfig(TIM1, TIM_OCPreload_Enable);
+
 	TIM_CtrlPWMOutputs(TIM1, ENABLE);
 	TIM_Cmd(TIM1, ENABLE);
 	// CCR1/2: 0~7200
@@ -60,8 +64,8 @@ static void motor_arg_init(void) {
 	kalman1_init(&Lmotor_Filter, 0, 0.01f);
 	kalman1_init(&Rmotor_Filter, 0, 0.01f);
 
-	Incremental_PID_Init(&Lmotor_PID, 0.75f, 0.15f, 0.0f, 0.0f, 1.0f);
-	Incremental_PID_Init(&Rmotor_PID, 0.75f, 0.15f, 0.0f, 0.0f, 1.0f); // 0.65 0.2
+	Incremental_PID_Init(&Lmotor_PID, 0.90f, 0.03f, 0.0f, 0.0f, 1.0f);
+	Incremental_PID_Init(&Rmotor_PID, 0.90f, 0.03f, 0.0f, 0.0f, 1.0f); // 0.65 0.2
 }
 
 float GetDutyl(void) {
@@ -92,10 +96,10 @@ void SetDutyr(float duty) { // PB12 PB13
 		GPIO_WriteBit(GPIOB, GPIO_Pin_13, Bit_SET);
 		if (duty < -1.0f) duty = -1.0f;
 	}
-	if (duty > 1.0f) {
+	else {
 		GPIO_WriteBit(GPIOB, GPIO_Pin_12, Bit_SET);
 		GPIO_WriteBit(GPIOB, GPIO_Pin_13, Bit_RESET);		
-		duty = 1.0f;
+		if (duty > 1.0f) duty = 1.0f;
 	}
 	TIM1->CCR1 = (uint16_t)(fabs(duty) * (TIM1->ARR+1));
 }
@@ -263,14 +267,16 @@ void motor_Task(void) { // PI: 正转速度 -> 0~1占空比
 
 #endif
 
-	// float target = GetTarget(); // 0~3
+	float target = GetTarget(); // 0~1.1
 	// 滤波还是分离出来吧 speedx -> x_filter_speed
 
 	L_filter_speed = kalman1_filter(&Lmotor_Filter, speedl);
 	R_filter_speed = kalman1_filter(&Rmotor_Filter, speedr);
 
-	PID_Lmotor(&Lmotor_PID, LmotorTarget);
-	PID_Rmotor(&Rmotor_PID, RmotorTarget);
+	PID_motor(&Lmotor_PID, target, L_filter_speed);
+	PID_motor(&Rmotor_PID, target, R_filter_speed);
+	// PID_motor(&Lmotor_PID, target, speedl);
+	// PID_motor(&Rmotor_PID, target, speedr);	
 
 	SetDutyl(Lmotor_PID.output);
 	SetDutyr(Rmotor_PID.output);
@@ -336,7 +342,8 @@ void Target_AD_Init(void) { // PA3
 }
 
 float GetTarget(void) { // 目标速度：电位器全量程对应-3~3m/s。
-	float temp_target = 1.0f*AD_Value / 4095.0f * 6.0f - 3.0f;
+	// float temp_target = 1.0f*AD_Value / 4095.0f * 6.0f - 3.0f;
+	float temp_target = 1.0f*AD_Value / 4095.0f * 1.1f;
 	if (temp_target < 0.1f && temp_target > -0.1f) temp_target = 0.0f;
 	return temp_target;
 }

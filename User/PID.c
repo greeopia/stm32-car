@@ -56,7 +56,7 @@ void Incremental_PID_Cal(PID *pid, float set_value,float get_value)
     else errori = 0.0f; // 死区：±0.1内视为无偏差（只针对这个电机）
     // float errori = pid->error; // 积分不死区
 
-	pid->output += pid->kp * (pid->error - pid->lastError) + pid->ki * errori + 
+	pid->output += pid->kp * (pid->error - pid->lastError) + pid->ki * pid->error + 
 				pid->kd * (pid->error - 2*pid->lastError + pid->lastlastError);			//增量式PI控制器
 	pid->lastlastError = pid->lastError;    											//保存上上次误差
 	pid->lastError = pid->error;	           											//保存上一次偏差
@@ -141,12 +141,12 @@ void PID_Reset(PID *pid)
 // 左轮正转速度PI，输出范围由motor_pid_init()设置为0~1。
 extern float L_filter_speed;  
 extern float R_filter_speed;  
-void PID_Lmotor(PID* pid, float target)
+void PID_motor(PID* pid, float target, float actual)
 {
     if (target <= 0.0f)
     {
         PID_Reset(pid);
-        L_filter_speed = 0.0f;
+        actual = 0.0f;
         return;
     }
 
@@ -159,30 +159,9 @@ void PID_Lmotor(PID* pid, float target)
     // speedl = filter_speed;
 
     //解算PID获得电机输出
-    Incremental_PID_Cal(pid,target,L_filter_speed);
+    Incremental_PID_Cal(pid,target,actual);
 }
 
-// 右轮正转速度PI，负目标按停止处理。
-void PID_Rmotor(PID* pid, float target)
-{
-    if (target <= 0.0f)
-    {
-        PID_Reset(pid);
-        R_filter_speed = 0.0f;
-        return;
-    }
-
-    // //一阶低通滤波
-    // float filt = 0.90f;
-    // float filter_speed = filt * speedr + (1 - filt) * R_filter_speed;
-    // R_filter_speed = filter_speed;  //更新保存
-
-    //将滤波后的值用于PID
-    // speedr = filter_speed;
-
-    //解算PID获得电机输出
-    Incremental_PID_Cal(pid,target,R_filter_speed);
-}
 
 // //PID智能车平滑起步，防止电机猛转
 // float limit_p = 0.0f;

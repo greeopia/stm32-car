@@ -138,7 +138,7 @@ void BlueTooth_init() {
 	USART_Cmd(USART1, ENABLE);
 
 	GPIO_InitStruct.GPIO_Mode = GPIO_Mode_IN_FLOATING;
-	GPIO_InitStruct.GPIO_Pin = GPIO_Pin_7; 
+	GPIO_InitStruct.GPIO_Pin = GPIO_Pin_10; 
 	GPIO_InitStruct.GPIO_Speed = GPIO_Speed_50MHz;
 	GPIO_Init(GPIOA, &GPIO_InitStruct);    // STATE
 }
@@ -272,10 +272,10 @@ void BlueToothVofa_Task() {
 #endif
 	txFrame.fdata[2] = L_filter_speed;
 	txFrame.fdata[3] = R_filter_speed;
-    txFrame.fdata[4] = LmotorTarget; 
-    txFrame.fdata[5] = RmotorTarget; 
-	// txFrame.fdata[2] = target; // 左轮正转目标，0~3m/s
-    // txFrame.fdata[3] = target; // 右轮使用同一次ADC读数
+    // txFrame.fdata[4] = LmotorTarget; 
+    // txFrame.fdata[5] = RmotorTarget; 
+	txFrame.fdata[4] = target; // 左轮正转目标，0~3m/s
+    txFrame.fdata[5] = target; // 右轮使用同一次ADC读数
 
     txFrame.fdata[6] = GetDutyl(); // 左轮占空比，0~1
     txFrame.fdata[7] = GetDutyr(); // 右轮占空比，0~1
