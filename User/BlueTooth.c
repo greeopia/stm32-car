@@ -5,6 +5,7 @@
 #include "vofa.h"
 #include "string.h"
 #include "motor.h"
+#include "PID.h"
 
 /* 临时诊断：CH0/1显示每100ms原始脉冲数；改回0恢复两轮速度。 */
 #define VOFA_SHOW_RAW_PULSES 0
@@ -259,7 +260,8 @@ uint16_t GetRxBuf(const void* data, uint16_t size) {
 
 */
 
-extern float L_filter_speed, R_filter_speed;
+extern float L_filter_speed, R_filter_speed, bias;
+extern PID IR_PID;
 
 void BlueToothVofa_Task() {
 	float target = GetTarget();
@@ -267,15 +269,15 @@ void BlueToothVofa_Task() {
     txFrame.fdata[0] = pulse_l_100ms;
     txFrame.fdata[1] = pulse_r_100ms;
 #else
-    txFrame.fdata[0] = speedl;
-    txFrame.fdata[1] = speedr; // 实际速度
+    txFrame.fdata[0] = bias;
+    txFrame.fdata[1] = IR_PID.output; 
 #endif
 	txFrame.fdata[2] = L_filter_speed;
 	txFrame.fdata[3] = R_filter_speed;
-    // txFrame.fdata[4] = LmotorTarget; 
-    // txFrame.fdata[5] = RmotorTarget; 
-	txFrame.fdata[4] = target; // 左轮正转目标，0~3m/s
-    txFrame.fdata[5] = target; // 右轮使用同一次ADC读数
+    txFrame.fdata[4] = LmotorTarget; 
+    txFrame.fdata[5] = RmotorTarget; 
+	// txFrame.fdata[4] = target; // 左轮正转目标，0~3m/s
+    // txFrame.fdata[5] = target; // 右轮使用同一次ADC读数
 
     txFrame.fdata[6] = GetDutyl(); // 左轮占空比，0~1
     txFrame.fdata[7] = GetDutyr(); // 右轮占空比，0~1

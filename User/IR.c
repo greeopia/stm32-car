@@ -37,7 +37,8 @@ static void IR_Task_Init(void) {
 	LmotorTarget = 0.0f;
 	RmotorTarget = 0.0f;
 
-	Positional_PID_Init(&IR_PID, 0.1f, 0.0f, 0.00f, 999.9f, -0.4f, 0.4f);
+	// Positional_PID_Init(&IR_PID, 0.1f, 0.0f, 0.00f, 999.9f, -0.4f, 0.4f);
+	Positional_PID_Init(&IR_PID, 0.05f, 0.0f, 0.3f, 999.9f, -0.2f, 0.2f);
 }
 
 void IR_init(void) {
@@ -88,8 +89,8 @@ static void IR_Mask_Update() {
 	}
 }
 
-float base_speed = 0.0f, base_speed_max = 0.8f;
-// 3s电池速度最高大概1.25m/s
+// float base_speed = 0.0f, base_speed_max = 0.4f;
+float base_speed = 0.0f, base_speed_max = 0.25f;
 
 static uint32_t check = 0;
 static uint8_t check_first = 1;
@@ -103,7 +104,7 @@ void IR_Task(void) { // 我想应该用位置式pd控制器
 				check = GetTick();
 				check_first = 0;
 			}
-			if (GetTick() - check >= 2000) {
+			if (GetTick() - check >= 3000) {
 				__disable_irq();
 				SetDutyl(0.0f); SetDutyr(0.0f);
 				while(1);
@@ -112,7 +113,8 @@ void IR_Task(void) { // 我想应该用位置式pd控制器
 		}
 		case IR_State_FullCheck: {
 			bias = 0.0f; 
-			LmotorTarget = base_speed; RmotorTarget = base_speed;
+			// LmotorTarget = base_speed; RmotorTarget = base_speed;
+			LmotorTarget = base_speed_max; RmotorTarget = base_speed_max;
 
 			break;
 		}
@@ -121,8 +123,10 @@ void IR_Task(void) { // 我想应该用位置式pd控制器
 
 			Positional_PID_Cal(&IR_PID, 0, bias);
 
-			LmotorTarget = base_speed - IR_PID.output; 
-			RmotorTarget = base_speed + IR_PID.output;
+			// LmotorTarget = base_speed - IR_PID.output; 
+			// RmotorTarget = base_speed + IR_PID.output;
+			LmotorTarget = base_speed_max - IR_PID.output; 
+			RmotorTarget = base_speed_max + IR_PID.output;
 			break;
 		}
 		/*

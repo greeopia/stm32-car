@@ -11,7 +11,7 @@ extern PID speed_decision;
 #define SPEED_DEC   1.20f   // 降速加速度上限 m/s²（降速快 4 倍）
 #define SPEED_KP    6.0f    // 速度环增益 1/s
 #define SPEED_MIN   0.20f   // 基础速度下限 m/s
-#define SPEED_K_SLOW 0.12f  // 每 1 单位 |bias| 降多少 m/s
+#define SPEED_K_SLOW 0.06f  // 每 1 单位 |bias| 降多少 m/s
 
 /**
  * ************************************************************************

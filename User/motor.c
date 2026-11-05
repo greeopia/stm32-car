@@ -267,14 +267,14 @@ void motor_Task(void) { // PI: 正转速度 -> 0~1占空比
 
 #endif
 
-	float target = GetTarget(); // 0~1.1
+	// float target = GetTarget(); // 0~1.1
 	// 滤波还是分离出来吧 speedx -> x_filter_speed
 
 	L_filter_speed = kalman1_filter(&Lmotor_Filter, speedl);
 	R_filter_speed = kalman1_filter(&Rmotor_Filter, speedr);
 
-	PID_motor(&Lmotor_PID, target, L_filter_speed);
-	PID_motor(&Rmotor_PID, target, R_filter_speed);
+	PID_motor(&Lmotor_PID, LmotorTarget, L_filter_speed);
+	PID_motor(&Rmotor_PID, RmotorTarget, R_filter_speed);
 	// PID_motor(&Lmotor_PID, target, speedl);
 	// PID_motor(&Rmotor_PID, target, speedr);	
 

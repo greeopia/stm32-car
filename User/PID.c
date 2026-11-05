@@ -146,7 +146,6 @@ void PID_motor(PID* pid, float target, float actual)
     if (target <= 0.0f)
     {
         PID_Reset(pid);
-        actual = 0.0f;
         return;
     }
 
